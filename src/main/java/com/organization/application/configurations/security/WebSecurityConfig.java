@@ -1,5 +1,6 @@
 package com.organization.application.configurations.security;
 
+import com.organization.application.configurations.security.filters.JwtEntryPoint;
 import com.organization.application.configurations.security.filters.JwtFilter;
 import com.organization.application.services.implementations.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ public class WebSecurityConfig {
     @Autowired
     private JwtFilter jwtFilter;
 
+    @Autowired
+    private JwtEntryPoint jwtEntryPoint;
+
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(7);
@@ -40,6 +44,9 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> {
+                    httpSecurityExceptionHandlingConfigurer.authenticationEntryPoint(jwtEntryPoint);
+                })
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> {
                     authorizationManagerRequestMatcherRegistry.requestMatchers("/auth/**").permitAll();
                     authorizationManagerRequestMatcherRegistry.anyRequest().authenticated();

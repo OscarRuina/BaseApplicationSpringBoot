@@ -50,7 +50,7 @@ public class JwtUtil {
     }
 
     //3 - Validate Access Token
-    public Boolean isTokenValid(String token, UserDetails userDetails){
+    public Boolean isTokenValid(String token){
         boolean isValid = false;
         try{
             Jwts.parserBuilder()
@@ -58,9 +58,7 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            if (getUsername(token).equalsIgnoreCase(userDetails.getUsername())){
-                isValid = true;
-            }
+            isValid = true;
         }catch (Exception e){
             log.error("ERROR Invalid Token ".concat(e.getMessage()));
         }
