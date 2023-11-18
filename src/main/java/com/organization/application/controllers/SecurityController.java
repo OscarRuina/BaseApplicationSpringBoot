@@ -4,7 +4,7 @@ import com.organization.application.configurations.exceptions.AuthenticationExce
 import com.organization.application.dtos.request.LoginRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.services.implementations.AuthService;
-import com.organization.application.utils.AppResponse;
+import com.organization.application.dtos.response.ApplicationResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,19 +26,19 @@ public class SecurityController {
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AppResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
+    public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
         log.info("POST:api/auth/login");
         try{
             LoginResponseDTO dto=  authService.login(loginRequestDTO);
             log.info("Login Successful");
-            return new ResponseEntity<>(new AppResponse<>(dto,"Login Successful"),HttpStatus.OK);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Login Successful"),HttpStatus.OK);
         }catch (AuthenticationException e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new AppResponse<>(null, e.getMessage()),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new AppResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
 

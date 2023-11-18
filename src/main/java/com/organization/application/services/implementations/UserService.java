@@ -14,7 +14,6 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.interfaces.IRoleService;
 import com.organization.application.services.interfaces.IUserService;
-import com.organization.application.utils.ApplicationResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Set;
@@ -22,8 +21,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 

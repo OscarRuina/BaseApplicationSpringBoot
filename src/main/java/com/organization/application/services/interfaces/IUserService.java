@@ -5,7 +5,6 @@ import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
-import org.springframework.http.ResponseEntity;
 
 public interface IUserService {
 
