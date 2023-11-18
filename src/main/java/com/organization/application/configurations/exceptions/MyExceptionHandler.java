@@ -23,4 +23,9 @@ public class MyExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
 
+    @ExceptionHandler(UserAlreadyExistException.class)
+    public ResponseEntity<String> handlerUserAlreadyExistException(UserAlreadyExistException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
 }

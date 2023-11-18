@@ -1,8 +1,11 @@
 package com.organization.application.services.implementations;
 
+import com.organization.application.configurations.exceptions.AuthenticationException;
+import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.models.entities.RoleEntity;
 import com.organization.application.models.entities.UserEntity;
 import com.organization.application.models.enums.RoleType;
@@ -59,34 +62,34 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public ResponseEntity<Object> register(RegisterUserRequestDTO registerUserRequestDTO) {
-
+    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
+        log.info("Inside user service method register");
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
-            return ApplicationResponse.getResponseEntity("ERROR Username Already Exist", HttpStatus.BAD_REQUEST);
+            throw new UserAlreadyExistException("ERROR User Already Exist");
         }else {
+            if (!registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
+                throw new AuthenticationException("ERROR Role Not Valid");
+            }
             RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
             log.info(role.getType().name());
             if (registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
-                return ApplicationResponse.getResponseEntity(
-                        userConverter.userToUserResponseDTO(
-                                userRepository.save(
-                                        UserEntity.builder()
-                                                .firstname(registerUserRequestDTO.getFirstname())
-                                                .lastname(registerUserRequestDTO.getLastname())
-                                                .email(registerUserRequestDTO.getEmail())
-                                                .password(encryptPassword(registerUserRequestDTO.getPassword()))
-                                                .active(true)
-                                                .roleEntities(Set.of(role))
-                                                .build()
-                                )
+                return userConverter.userToUserResponseDTO(
+                        userRepository.save(
+                                UserEntity.builder()
+                                        .firstname(registerUserRequestDTO.getFirstname())
+                                        .lastname(registerUserRequestDTO.getLastname())
+                                        .email(registerUserRequestDTO.getEmail())
+                                        .password(encryptPassword(registerUserRequestDTO.getPassword()))
+                                        .active(true)
+                                        .roleEntities(Set.of(role))
+                                        .build()
                         )
-                        , HttpStatus.CREATED
                 );
             }else {
-                return ApplicationResponse.getResponseEntity("ERROR Cant' Create User", HttpStatus.BAD_REQUEST);
+                log.error("ERROR Cant Create User");
+                throw new AuthenticationException("ERROR Cant Create User");
             }
         }
-
     }
 
     @Override

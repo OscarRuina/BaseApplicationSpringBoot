@@ -5,7 +5,6 @@ import com.organization.application.dtos.request.LoginRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.services.implementations.AuthService;
 import com.organization.application.utils.AppResponse;
-import com.organization.application.utils.ApplicationResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +27,10 @@ public class SecurityController {
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AppResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
+        log.info("POST:api/auth/login");
         try{
             LoginResponseDTO dto=  authService.login(loginRequestDTO);
+            log.info("Login Successful");
             return new ResponseEntity<>(new AppResponse<>(dto,"Login Successful"),HttpStatus.OK);
         }catch (AuthenticationException e){
             log.error("{}", e.getMessage());

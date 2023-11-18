@@ -1,12 +1,13 @@
 package com.organization.application.services.interfaces;
 
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.response.UserResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 
 public interface IUserService {
 
-    ResponseEntity<Object> register(RegisterUserRequestDTO registerUserRequestDTO);
+    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO);
 
     ResponseEntity<Object> me(HttpServletRequest request);
 

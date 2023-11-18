@@ -1,7 +1,11 @@
 package com.organization.application.controllers;
 
+import com.organization.application.configurations.exceptions.AuthenticationException;
+import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.services.interfaces.IUserService;
+import com.organization.application.utils.AppResponse;
 import com.organization.application.utils.ApplicationResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -54,13 +58,21 @@ public class UserController {
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<Object> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO){
+    public ResponseEntity<AppResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO){
+        log.info("POST:api/users/register");
         try{
-            return userService.register(registerUserRequestDTO);
+            UserResponseDTO dto =  userService.register(registerUserRequestDTO);
+            log.info("Register Successful");
+            return new ResponseEntity<>(new AppResponse<>(dto,"Register Successful"),HttpStatus.OK);
+        }catch (AuthenticationException | UserAlreadyExistException e) {
+            log.error("{}", e.getMessage());
+            return new ResponseEntity<>(new AppResponse<>(null, e.getMessage()),
+                    HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
+            return new ResponseEntity<>(new AppResponse<>(null, "An error Occurred"),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return ApplicationResponse.getResponseEntity("ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @GetMapping(value = "/active",produces = MediaType.APPLICATION_JSON_VALUE)
