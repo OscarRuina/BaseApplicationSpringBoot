@@ -12,8 +12,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-@Slf4j
+
 @Service
+@Slf4j
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
@@ -25,14 +26,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.info("Inside loadUserByUsername {} " , username);
         user = userRepository.findByEmail(username).orElseThrow(
-                () -> { throw new UsernameNotFoundException("ERROR username not found: " + username);}
+                () -> new UsernameNotFoundException("ERROR Username not found: " + username)
         );
+        log.info("User loaded: {}", user.getEmail());
         return User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(
                         user.getRoleEntities().stream().map(roleEntity ->
-                            new SimpleGrantedAuthority("ROLE_" + roleEntity.getType().name())
+                            new SimpleGrantedAuthority(roleEntity.getType().getPrefixedName())
                         ).collect(Collectors.toSet()))
                 .build();
     }

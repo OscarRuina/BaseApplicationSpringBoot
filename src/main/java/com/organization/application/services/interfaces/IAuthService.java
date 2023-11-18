@@ -1,11 +1,12 @@
 package com.organization.application.services.interfaces;
 
 import com.organization.application.dtos.request.LoginRequestDTO;
+import com.organization.application.dtos.response.LoginResponseDTO;
 import org.springframework.http.ResponseEntity;
 
 public interface IAuthService {
 
-    ResponseEntity<Object> login(LoginRequestDTO loginRequestDTO);
+    LoginResponseDTO login(LoginRequestDTO loginRequestDTO);
 
 
 }

@@ -1,5 +1,6 @@
 package com.organization.application.configurations.security.filters;
 
+import com.organization.application.configurations.exceptions.InvalidFilterTokenException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.services.implementations.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
@@ -47,9 +48,12 @@ public class JwtFilter extends OncePerRequestFilter {
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                log.debug("Token found and valid. Username: {}", username);
             }
         }catch (RuntimeException e){
-            log.error(e.getMessage());
+            log.error("ERROR filter token" + e.getMessage());
+            throw new InvalidFilterTokenException("ERROR invalid filter token", e);
         }
 
         filterChain.doFilter(request,response);

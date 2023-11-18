@@ -4,6 +4,10 @@ public enum RoleType {
 
     ADMIN,
 
-    USER,
+    USER;
+
+    public String getPrefixedName() {
+        return "ROLE_" + this.name();
+    }
 
 }

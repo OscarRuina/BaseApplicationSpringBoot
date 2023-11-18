@@ -1,5 +1,6 @@
 package com.organization.application.configurations.security.jwt;
 
+import com.organization.application.configurations.exceptions.InvalidTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -15,8 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-@Slf4j
+
 @Service
+@Slf4j
 public class JwtUtil {
 
     //encrypted key generator online
@@ -50,18 +52,18 @@ public class JwtUtil {
 
     //3 - Validate Access Token
     public Boolean isTokenValid(String token){
-        boolean isValid = false;
         try{
             Jwts.parserBuilder()
                     .setSigningKey(getSignatureKey())
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            isValid = true;
+            return true;
         }catch (Exception e){
             log.error("ERROR Invalid Token ".concat(e.getMessage()));
+            throw new InvalidTokenException("ERROR validating token",e);
         }
-        return isValid;
+
     }
 
     //4 - Get Claims From Token
