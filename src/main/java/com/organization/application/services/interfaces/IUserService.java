@@ -1,26 +1,28 @@
 package com.organization.application.services.interfaces;
 
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 
 public interface IUserService {
 
     UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO);
 
-    ResponseEntity<Object> me(HttpServletRequest request);
+    LoginResponseDTO me(HttpServletRequest request);
 
-    ResponseEntity<Object> findUsers();
+    List<UserResponseDTO> findUsers();
 
-    ResponseEntity<Object> findUsersActive(boolean active);
+    List<UserResponseDTO> findUsersActive(boolean active);
 
-    ResponseEntity<Object> findUser(Integer id);
+    UserResponseDTO findUser(Integer id);
 
-    ResponseEntity<Object> delete(Integer id, HttpServletRequest request);
+    UserResponseDTO delete(Integer id, HttpServletRequest request);
 
-    ResponseEntity<Object> updateStatus(Integer id, HttpServletRequest request);
+    UserResponseDTO updateStatus(Integer id, HttpServletRequest request);
 
-    ResponseEntity<Object> updateRole(Integer id, String role);
+    UserResponseDTO updateRole(Integer id, String role);
 
 }

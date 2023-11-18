@@ -28,4 +28,9 @@ public class MyExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
 
+    @ExceptionHandler(UserNotExistException.class)
+    public ResponseEntity<String> handlerUserNotExistException(UserNotExistException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
 }
