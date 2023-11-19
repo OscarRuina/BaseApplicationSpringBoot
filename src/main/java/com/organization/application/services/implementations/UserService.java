@@ -8,6 +8,7 @@ import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
+import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.models.entities.RoleEntity;
 import com.organization.application.models.entities.UserEntity;
 import com.organization.application.models.enums.RoleType;
@@ -17,9 +18,7 @@ import com.organization.application.services.interfaces.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,23 +27,32 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UserService implements IUserService {
 
-    @Autowired
-    private IUserRepository userRepository;
+    private final IUserRepository userRepository;
 
-    @Autowired
-    private UserConverter userConverter;
+    private final UserConverter userConverter;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
-    private IRoleService roleService;
+    private final IRoleService roleService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    private final static String BEARER_PART = "Bearer ";
+    private static final  String BEARER_PART = "Bearer ";
 
+    public UserService(IUserRepository userRepository, UserConverter userConverter,
+            UserDetailsServiceImpl userDetailsService, IRoleService roleService, JwtUtil jwtUtil) {
+        this.userRepository = userRepository;
+        this.userConverter = userConverter;
+        this.userDetailsService = userDetailsService;
+        this.roleService = roleService;
+        this.jwtUtil = jwtUtil;
+    }
+
+    /**
+     * Método encargado de retornar los datos del usuario autenticado en la aplicación
+     * @param request
+     * @return LoginResponseDTO
+     */
     @Override
     public LoginResponseDTO me(HttpServletRequest request) {
         log.info("Inside user service method me ");
@@ -57,17 +65,22 @@ public class UserService implements IUserService {
 
             return userConverter.userToLoginResponseDTO(userDetailsService.getUser(), token);
         }
-        throw new AuthenticationException("ERROR Bad Credentials");
+        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
     }
 
+    /**
+     * Método encargado de crear un nuevo usuario en la aplicación
+     * @param registerUserRequestDTO
+     * @return UserResponseDTO
+     */
     @Override
     public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
         log.info("Inside user service method register");
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
-            throw new UserAlreadyExistException("ERROR User Already Exist");
+            throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
             if (!registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
-                throw new AuthenticationException("ERROR Role Not Valid");
+                throw new AuthenticationException(ExceptionMessages.ROLE_NOT_VALID);
             }
             RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
             log.info(role.getType().name());
@@ -85,33 +98,47 @@ public class UserService implements IUserService {
                         )
                 );
             }else {
-                log.error("ERROR Cant Create User");
-                throw new AuthenticationException("ERROR Cant Create User");
+                log.error(ExceptionMessages.CANT_CREATE_USER);
+                throw new AuthenticationException(ExceptionMessages.CANT_CREATE_USER);
             }
         }
     }
 
+    /**
+     * Método encargado de buscar todos los usuarios de la aplicación
+     * @return List<UserResponseDTO>
+     */
     @Override
     public List<UserResponseDTO> findUsers() {
         log.info("Inside user service method find users");
         return userRepository.findAll().stream()
-                .map(user -> userConverter.userToUserResponseDTO(user))
-                .collect(Collectors.toList());
+                .map(userConverter::userToUserResponseDTO)
+                .toList();
     }
 
+    /**
+     * Método encargado de buscar todos los usuarios que no han sido eliminados de la aplicación
+     * @param active
+     * @return List<UserResponseDTO>
+     */
     @Override
     public List<UserResponseDTO> findUsersActive(boolean active) {
         log.info("Inside user service method find active users");
         return userRepository.findAllByActive(active).stream()
-                .map(user -> userConverter.userToUserResponseDTO(user))
-                .collect(Collectors.toList());
+                .map(userConverter::userToUserResponseDTO)
+                .toList();
     }
 
+    /**
+     * Método encargado de buscar un usuario en la aplicación
+     * @param id
+     * @return UserResponseDTO
+     */
     @Override
     public UserResponseDTO findUser(Integer id) {
         log.info("Inside user service method find user by id");
         if (userRepository.findById(id).isEmpty()){
-            throw new UserNotExistException("ERROR User Not Exist");
+            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
         }else {
             return userConverter.userToUserResponseDTO(
                     userRepository.findById(id).get()
@@ -119,6 +146,12 @@ public class UserService implements IUserService {
         }
     }
 
+    /**
+     * Método encargado de eliminar un usuario en la aplicación
+     * @param id
+     * @param request
+     * @return UserResponseDTO
+     */
     @Override
     public UserResponseDTO delete(Integer id, HttpServletRequest request) {
         log.info("Inside user service method delete user by id");
@@ -126,13 +159,17 @@ public class UserService implements IUserService {
         String token = "";
 
         if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException("ERROR User Not Exist or its Has Eliminated");
+            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
         }else{
+            if (userRepository.findById(id).get().getRoleEntities().stream().anyMatch(
+                    roleEntity -> roleEntity.getType().name().equalsIgnoreCase(RoleType.ADMIN.name()))){
+                throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
+            }
             if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
                 token = authorizationHeader.substring(7);
                 String username = jwtUtil.getUsername(token);
                 if (username.equalsIgnoreCase(userRepository.findById(id).get().getEmail())){
-                    throw new AuthenticationException("ERROR Cant Delete");
+                    throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
                 }else {
                     UserEntity user = userRepository.findById(id).get();
                     user.setActive(false);
@@ -141,9 +178,15 @@ public class UserService implements IUserService {
                 }
             }
         }
-        throw new AuthenticationException("ERROR Bad Credentials");
+        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
     }
 
+    /**
+     * Método encargado de actualizar el estado de un usuario en la aplicación
+     * @param id
+     * @param request
+     * @return UserResponseDTO
+     */
     @Override
     public UserResponseDTO updateStatus(Integer id, HttpServletRequest request) {
         log.info("Inside user service method update status user by id");
@@ -151,13 +194,13 @@ public class UserService implements IUserService {
         String token = "";
 
         if (userRepository.findById(id).isEmpty() || userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException("ERROR User Not Exist or its Has Not Eliminated");
+            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
         }else{
             if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
                 token = authorizationHeader.substring(7);
                 String username = jwtUtil.getUsername(token);
                 if (username.equalsIgnoreCase(userRepository.findById(id).get().getEmail())){
-                    throw new AuthenticationException("ERROR Cant Delete");
+                    throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
                 }else {
                     UserEntity user = userRepository.findById(id).get();
                     user.setActive(true);
@@ -166,14 +209,20 @@ public class UserService implements IUserService {
                 }
             }
         }
-        throw new AuthenticationException("ERROR Bad Credentials");
+        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
     }
 
+    /**
+     * Método encargado de actualizar el rol de un usuario en la aplicación
+     * @param id
+     * @param role
+     * @return UserResponseDTO
+     */
     @Override
     public UserResponseDTO updateRole(Integer id, String role) {
         log.info("Inside user service method update role");
         if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException("ERROR User Not Exist or its Has Eliminated");
+            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
         }else{
             if (role.equalsIgnoreCase(RoleType.USER.name()) || role.equalsIgnoreCase(RoleType.ADMIN.name())){
                 UserEntity user = userRepository.findById(id).get();
@@ -181,11 +230,16 @@ public class UserService implements IUserService {
                 userRepository.save(user);
                 return userConverter.userToUserResponseDTO(user);
             }else {
-                throw new AuthenticationException("ERROR Role Not Valid");
+                throw new AuthenticationException(ExceptionMessages.ROLE_NOT_VALID);
             }
         }
     }
 
+    /**
+     * Método encargado de encriptar las contraseñas
+     * @param password
+     * @return String
+     */
     private String encryptPassword(String password) {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(7);
         return passwordEncoder.encode(password);

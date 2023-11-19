@@ -3,7 +3,6 @@ package com.organization.application.configurations.security;
 import com.organization.application.configurations.security.filters.JwtEntryPoint;
 import com.organization.application.configurations.security.filters.JwtFilter;
 import com.organization.application.services.implementations.UserDetailsServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,39 +22,33 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final JwtFilter jwtFilter;
 
-    @Autowired
-    private JwtFilter jwtFilter;
+    private final JwtEntryPoint jwtEntryPoint;
 
-    @Autowired
-    private JwtEntryPoint jwtEntryPoint;
+    public WebSecurityConfig(JwtFilter jwtFilter,
+            JwtEntryPoint jwtEntryPoint) {
+        this.jwtFilter = jwtFilter;
+        this.jwtEntryPoint = jwtEntryPoint;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(7);
     }
 
-    /** Security Filter. After Security 6.1 uses Lambda Expression.
-     * Configure the authorize request and token filter **/
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
-                .exceptionHandling(httpSecurityExceptionHandlingConfigurer -> {
-                    httpSecurityExceptionHandlingConfigurer.authenticationEntryPoint(jwtEntryPoint);
+                .exceptionHandling(handler -> handler.authenticationEntryPoint(jwtEntryPoint))
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/auth/**").permitAll();
+                    auth.anyRequest().authenticated();
                 })
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> {
-                    authorizationManagerRequestMatcherRegistry.requestMatchers("/auth/**").permitAll();
-                    authorizationManagerRequestMatcherRegistry.anyRequest().authenticated();
-                })
-                .sessionManagement(httpSecuritySessionManagementConfigurer -> {
-                    httpSecuritySessionManagementConfigurer.sessionCreationPolicy(
-                            SessionCreationPolicy.STATELESS);
-                })
+                .sessionManagement(session -> session.sessionCreationPolicy(
+                        SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

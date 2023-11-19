@@ -1,6 +1,7 @@
 package com.organization.application.configurations.security.jwt;
 
 import com.organization.application.configurations.exceptions.InvalidTokenException;
+import com.organization.application.messages.ExceptionMessages;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -61,7 +62,7 @@ public class JwtUtil {
             return true;
         }catch (Exception e){
             log.error("ERROR Invalid Token ".concat(e.getMessage()));
-            throw new InvalidTokenException("ERROR validating token",e);
+            throw new InvalidTokenException(ExceptionMessages.INVALIDATE_TOKEN,e);
         }
 
     }

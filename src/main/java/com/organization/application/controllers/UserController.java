@@ -6,13 +6,13 @@ import com.organization.application.configurations.exceptions.UserNotExistExcept
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
+import com.organization.application.messages.ResponseMessages;
 import com.organization.application.services.interfaces.IUserService;
 import com.organization.application.dtos.response.ApplicationResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,8 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/users")
 public class UserController {
 
-    @Autowired
-    private IUserService userService;
+    private final IUserService userService;
+
+    public UserController(IUserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
@@ -41,11 +44,11 @@ public class UserController {
         log.info("GET:api/users/me");
         try{
             LoginResponseDTO dto =  userService.me(request);
-            log.info("Me Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Me Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.ME_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.ME_SUCCESSFUL),HttpStatus.OK);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -56,11 +59,11 @@ public class UserController {
         log.info("GET:api/users");
         try{
             List<UserResponseDTO> dto =  userService.findUsers();
-            log.info("Get Users Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Get Users Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.GET_USERS_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.GET_USERS_SUCCESSFUL),HttpStatus.OK);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -72,15 +75,15 @@ public class UserController {
         log.info("POST:api/users/register");
         try{
             UserResponseDTO dto =  userService.register(registerUserRequestDTO);
-            log.info("Register Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Register Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.REGISTER_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL),HttpStatus.OK);
         }catch (AuthenticationException | UserAlreadyExistException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -91,11 +94,11 @@ public class UserController {
         log.info("GET:api/users/active");
         try{
             List<UserResponseDTO> dto =  userService.findUsersActive(true);
-            log.info("Get Active Users Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Get Active Users Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.GET_ACTIVE_USERS_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.GET_ACTIVE_USERS_SUCCESSFUL),HttpStatus.OK);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -106,15 +109,15 @@ public class UserController {
         log.info("GET:api/users/id");
         try{
             UserResponseDTO dto =  userService.findUser(id);
-            log.info("Get User Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Get User Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.GET_USER_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.GET_USER_SUCCESSFUL),HttpStatus.OK);
         }catch (UserNotExistException e){
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -125,15 +128,15 @@ public class UserController {
         log.info("DELETE:api/users/id");
         try{
             UserResponseDTO dto =  userService.delete(id,request);
-            log.info("Delete Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Delete Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.DELETE_USER_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.DELETE_USER_SUCCESSFUL),HttpStatus.OK);
         }catch (AuthenticationException | UserNotExistException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -144,15 +147,15 @@ public class UserController {
         log.info("PUT:api/users/status/id");
         try{
             UserResponseDTO dto =  userService.updateStatus(id,request);
-            log.info("Update Status Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Update Status Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.UPDATE_STATUS_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_STATUS_SUCCESSFUL),HttpStatus.OK);
         }catch (AuthenticationException | UserNotExistException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -163,15 +166,15 @@ public class UserController {
         log.info("PUT:api/users/roles/id");
         try{
             UserResponseDTO dto =  userService.updateRole(id,role);
-            log.info("Update Role Successful");
-            return new ResponseEntity<>(new ApplicationResponse<>(dto,"Update Role Successful"),HttpStatus.OK);
+            log.info(ResponseMessages.UPDATE_ROLE_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_ROLE_SUCCESSFUL),HttpStatus.OK);
         }catch (AuthenticationException | UserNotExistException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
         }catch (Exception e){
             log.error("{}", e.getMessage());
-            return new ResponseEntity<>(new ApplicationResponse<>(null, "An error Occurred"),
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

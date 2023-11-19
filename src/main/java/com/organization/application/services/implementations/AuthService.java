@@ -5,10 +5,10 @@ import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.LoginRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
+import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.services.interfaces.IAuthService;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,17 +18,21 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AuthService implements IAuthService {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    private UserConverter userConverter;
+    private final UserConverter userConverter;
+
+    public AuthService(AuthenticationManager authenticationManager,
+            UserDetailsServiceImpl userDetailsService, JwtUtil jwtUtil, UserConverter userConverter) {
+        this.authenticationManager = authenticationManager;
+        this.userDetailsService = userDetailsService;
+        this.jwtUtil = jwtUtil;
+        this.userConverter = userConverter;
+    }
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
@@ -47,14 +51,14 @@ public class AuthService implements IAuthService {
                                     ).collect(Collectors.toSet())));
 
                 }else {
-                    log.error("ERROR User not active");
-                    throw new AuthenticationException("ERROR User is not active");
+                    log.error(ExceptionMessages.USER_NOT_ACTIVE);
+                    throw new AuthenticationException(ExceptionMessages.USER_NOT_ACTIVE);
                 }
             }
         }catch (Exception e){
             log.error("{}", e.getMessage());
         }
-        throw new AuthenticationException("ERROR Bad Credentials");
+        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
 
     }
 

@@ -2,14 +2,15 @@ package com.organization.application.configurations.security.filters;
 
 import com.organization.application.configurations.exceptions.InvalidFilterTokenException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
+import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.services.implementations.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,19 +23,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final static String BEARER_PART = "Bearer ";
+    private static final  String BEARER_PART = "Bearer ";
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
 
-    /** Filter before accessing endpoint **/
+    public JwtFilter(JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull  HttpServletRequest request,@NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try{
             String token = getToken(request);
@@ -53,7 +55,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }catch (RuntimeException e){
             log.error("ERROR filter token" + e.getMessage());
-            throw new InvalidFilterTokenException("ERROR invalid filter token", e);
+            throw new InvalidFilterTokenException(ExceptionMessages.INVALIDATE_TOKEN, e);
         }
 
         filterChain.doFilter(request,response);
