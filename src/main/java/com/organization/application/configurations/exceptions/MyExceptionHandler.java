@@ -33,4 +33,9 @@ public class MyExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
 
+    @ExceptionHandler(AttributeErrorsException.class)
+    public ResponseEntity<String> handlerAttributeErrorsException(AttributeErrorsException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
 }

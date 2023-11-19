@@ -5,10 +5,11 @@ import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import org.springframework.validation.BindingResult;
 
 public interface IUserService {
 
-    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO);
+    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, BindingResult bindingResult);
 
     LoginResponseDTO me(HttpServletRequest request);
 

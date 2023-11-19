@@ -20,4 +20,6 @@ public final class ExceptionMessages {
 
     public static final String INVALIDATE_TOKEN = "ERROR validating token";
 
+    public static final String INVALID_ATTRIBUTES = "ERROR One or More Attributes has errors";
+
 }

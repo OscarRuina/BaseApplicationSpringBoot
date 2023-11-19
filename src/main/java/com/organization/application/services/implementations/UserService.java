@@ -1,5 +1,6 @@
 package com.organization.application.services.implementations;
 
+import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.BindingResult;
 
 @Service
 @Slf4j
@@ -74,8 +76,11 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
+    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, BindingResult bindingResult) {
         log.info("Inside user service method register");
+        if (bindingResult.hasErrors()){
+            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
+        }
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
