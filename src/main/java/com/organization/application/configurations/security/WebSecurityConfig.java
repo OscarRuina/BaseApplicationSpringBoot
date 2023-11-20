@@ -2,7 +2,6 @@ package com.organization.application.configurations.security;
 
 import com.organization.application.configurations.security.filters.JwtEntryPoint;
 import com.organization.application.configurations.security.filters.JwtFilter;
-import com.organization.application.services.implementations.UserDetailsServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

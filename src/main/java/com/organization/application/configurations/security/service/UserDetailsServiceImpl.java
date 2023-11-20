@@ -1,4 +1,4 @@
-package com.organization.application.services.implementations;
+package com.organization.application.configurations.security.service;
 
 import com.organization.application.models.entities.UserEntity;
 import com.organization.application.repositories.IUserRepository;

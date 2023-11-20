@@ -1,10 +1,12 @@
 package com.organization.application.services.implementations;
 
+import com.organization.application.configurations.email.service.IEmailService;
 import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
+import com.organization.application.configurations.security.service.UserDetailsServiceImpl;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
@@ -39,15 +41,21 @@ public class UserService implements IUserService {
 
     private final JwtUtil jwtUtil;
 
+    private final IEmailService emailService;
+
     private static final  String BEARER_PART = "Bearer ";
 
+    private static final  String EMAIL_SUBJECT = "Registro de Usuario ";
+
     public UserService(IUserRepository userRepository, UserConverter userConverter,
-            UserDetailsServiceImpl userDetailsService, IRoleService roleService, JwtUtil jwtUtil) {
+            UserDetailsServiceImpl userDetailsService, IRoleService roleService, JwtUtil jwtUtil,
+            IEmailService emailService) {
         this.userRepository = userRepository;
         this.userConverter = userConverter;
         this.userDetailsService = userDetailsService;
         this.roleService = roleService;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
     }
 
     /**
@@ -90,7 +98,7 @@ public class UserService implements IUserService {
             RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
             log.info(role.getType().name());
             if (registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
-                return userConverter.userToUserResponseDTO(
+                UserResponseDTO dto =  userConverter.userToUserResponseDTO(
                         userRepository.save(
                                 UserEntity.builder()
                                         .firstname(registerUserRequestDTO.getFirstname())
@@ -102,6 +110,11 @@ public class UserService implements IUserService {
                                         .build()
                         )
                 );
+                String[] toUser = {registerUserRequestDTO.getEmail()};
+                String message = "Su usuario es: " + registerUserRequestDTO.getEmail() + " y su contraseña es: "
+                        + registerUserRequestDTO.getPassword();
+                emailService.sendEmail(toUser, EMAIL_SUBJECT, message);
+                return dto;
             }else {
                 log.error(ExceptionMessages.CANT_CREATE_USER);
                 throw new AuthenticationException(ExceptionMessages.CANT_CREATE_USER);

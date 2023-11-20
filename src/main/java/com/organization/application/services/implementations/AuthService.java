@@ -3,6 +3,7 @@ package com.organization.application.services.implementations;
 import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
+import com.organization.application.configurations.security.service.UserDetailsServiceImpl;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.LoginRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;

@@ -3,7 +3,7 @@ package com.organization.application.configurations.security.filters;
 import com.organization.application.configurations.exceptions.InvalidFilterTokenException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.messages.ExceptionMessages;
-import com.organization.application.services.implementations.UserDetailsServiceImpl;
+import com.organization.application.configurations.security.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
