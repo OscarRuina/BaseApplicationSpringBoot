@@ -56,8 +56,8 @@ public class UserEntity {
     @Column(name = "password_user", nullable = false)
     private String password;
 
-    @Column(name = "active_user", columnDefinition = "boolean default true")
-    private boolean active = true;
+    @Column(name = "active_user", nullable = false)
+    private boolean active;
 
     @Column(name = "create_at_user")
     @CreationTimestamp
