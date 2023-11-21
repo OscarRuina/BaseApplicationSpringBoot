@@ -43,9 +43,7 @@ public class WebSecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .exceptionHandling(handler -> handler.authenticationEntryPoint(jwtEntryPoint))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/auth/**").permitAll();
-                    auth.requestMatchers("/swagger-ui/**").permitAll();
-                    auth.requestMatchers("/v3/api-docs/**").permitAll();
+                    auth.requestMatchers("/auth/**", "/v3/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(
