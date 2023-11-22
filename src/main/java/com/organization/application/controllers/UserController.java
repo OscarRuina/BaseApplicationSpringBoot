@@ -7,9 +7,11 @@ import com.organization.application.configurations.exceptions.UserNotExistExcept
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
+import com.organization.application.messages.ConstantsMessages;
 import com.organization.application.messages.ResponseMessages;
 import com.organization.application.services.interfaces.IUserService;
 import com.organization.application.dtos.response.ApplicationResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/users")
+@SecurityRequirement(name = ConstantsMessages.SWAGGER_SECURITY_SCHEME_NAME)
 public class UserController {
 
     private final IUserService userService;
