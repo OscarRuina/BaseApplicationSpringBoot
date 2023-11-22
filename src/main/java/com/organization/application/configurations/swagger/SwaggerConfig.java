@@ -2,7 +2,6 @@ package com.organization.application.configurations.swagger;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import org.springdoc.core.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,21 +17,11 @@ public class SwaggerConfig {
     private static final String DESCRIPTION = "Your Description";
 
     @Bean
-    public GroupedOpenApi apiController(){
-        return GroupedOpenApi.builder()
-                .group(GROUP)
-                .packagesToScan(PACKAGE)
-                .build();
-    }
-
-    @Bean
-    public OpenAPI openAPI(){
+    public OpenAPI api(){
         return new OpenAPI()
-                .info(
-                        new Info().title(TITTLE)
-                                .description(DESCRIPTION)
-                                .version("v0.0.1")
-                );
+                .info(new Info().title(TITTLE)
+                        .description(DESCRIPTION)
+                        .version("v0.0.1"));
     }
 
 }
