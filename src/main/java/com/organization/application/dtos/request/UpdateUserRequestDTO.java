@@ -5,12 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
 public class UpdateUserRequestDTO {
 
     @NotBlank
@@ -18,10 +16,6 @@ public class UpdateUserRequestDTO {
 
     @NotBlank
     private String lastname;
-
-    @Email
-    @NotBlank
-    private String email;
 
     @NotBlank
     private String password;

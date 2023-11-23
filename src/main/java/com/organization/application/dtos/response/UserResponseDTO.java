@@ -5,11 +5,9 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 @JsonRootName("user")
 @Getter
-@Setter
 @Builder
 public class UserResponseDTO {
 

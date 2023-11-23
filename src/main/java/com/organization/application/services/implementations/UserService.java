@@ -9,6 +9,7 @@ import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserDetailsServiceImpl;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ExceptionMessages;
@@ -251,6 +252,43 @@ public class UserService implements IUserService {
                 throw new AuthenticationException(ExceptionMessages.ROLE_NOT_VALID);
             }
         }
+    }
+
+    /**
+     * Método encargado de actualizar el usuario autenticado en la aplicación
+     * @param updateUserRequestDTO
+     * @param request
+     * @param bindingResult
+     * @return
+     */
+    @Override
+    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO,
+            BindingResult bindingResult, HttpServletRequest request) {
+        log.info("Inside user service method update user ");
+
+        if (bindingResult.hasErrors()){
+            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
+        }
+
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = "";
+        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
+            token = authorizationHeader.substring(7);
+
+            String username = jwtUtil.getUsername(token);
+            if (userRepository.findByEmail(username).isPresent()){
+                UserEntity user = userRepository.findByEmail(username).get();
+                user.setFirstname(updateUserRequestDTO.getFirstname());
+                user.setLastname(updateUserRequestDTO.getLastname());
+                user.setPassword(encryptPassword(updateUserRequestDTO.getPassword()));
+
+                return userConverter.userToUserResponseDTO(userRepository.save(user));
+            }else{
+                throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
+            }
+
+        }
+        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
     }
 
     /**

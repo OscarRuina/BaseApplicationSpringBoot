@@ -5,6 +5,7 @@ import com.organization.application.configurations.exceptions.AuthenticationExce
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ConstantsMessages;
@@ -175,6 +176,26 @@ public class UserController {
             log.info(ResponseMessages.UPDATE_ROLE_SUCCESSFUL);
             return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_ROLE_SUCCESSFUL),HttpStatus.OK);
         }catch (AuthenticationException | UserNotExistException e) {
+            log.error("{}", e.getMessage());
+            return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
+                    HttpStatus.BAD_REQUEST);
+        }catch (Exception e){
+            log.error("{}", e.getMessage());
+            return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateUser(@Valid @RequestBody
+            UpdateUserRequestDTO updateUserRequestDTO, BindingResult bindingResult, HttpServletRequest request) {
+        log.info("PUT:api/users/");
+        try{
+            UserResponseDTO dto =  userService.updateUser(updateUserRequestDTO,bindingResult,request);
+            log.info(ResponseMessages.UPDATE_USER_SUCCESSFUL);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_USER_SUCCESSFUL),HttpStatus.OK);
+        }catch (AttributeErrorsException | AuthenticationException | UserNotExistException  e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
