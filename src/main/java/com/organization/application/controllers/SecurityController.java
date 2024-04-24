@@ -47,7 +47,5 @@ public class SecurityController {
             return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
-
 }

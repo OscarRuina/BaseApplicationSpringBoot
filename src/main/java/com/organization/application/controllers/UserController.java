@@ -205,5 +205,4 @@ public class UserController {
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 }
