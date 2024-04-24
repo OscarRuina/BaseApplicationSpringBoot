@@ -12,6 +12,6 @@
 * Ejecutar la aplicacion.
 * En la carpeta de configurations/seeder una vez creadas las tablas de la bd se ejecuta la clase UsersSeeder que inicializa la bd con dos usuarios:
   * username: admin@gmail.com password: foo1234.
-  * username: user@gmail.com password: foo1234.
+  * username: user@hotmail.com password: foo1234.
 * Probar endpoints utilizando **Postman**, localhost:8085/api/login -> utilizar las credenciales de los usuarios cargados. O Probar con **Swagger**. 
 * Swagger : http://localhost:8085/api/swagger-ui/index.html#/
