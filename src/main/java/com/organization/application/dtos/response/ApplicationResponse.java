@@ -17,5 +17,4 @@ public class ApplicationResponse<T>{
         this.data = data;
         this.message = message;
     }
-
 }

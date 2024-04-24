@@ -75,5 +75,4 @@ public class UserEntity {
             inverseJoinColumns = @JoinColumn(name = "id_role")
     )
     private Set<RoleEntity> roleEntities;
-
 }

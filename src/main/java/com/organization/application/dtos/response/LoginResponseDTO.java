@@ -25,5 +25,4 @@ public class LoginResponseDTO {
     private boolean active;
 
     private String token;
-
 }

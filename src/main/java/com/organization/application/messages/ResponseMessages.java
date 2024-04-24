@@ -25,5 +25,4 @@ public final class ResponseMessages {
     public static final String UPDATE_USER_SUCCESSFUL = "Update User Successful";
 
     public static final String ERROR = "An error Occurred";
-
 }

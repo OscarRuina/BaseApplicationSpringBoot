@@ -12,5 +12,4 @@ public class RoleResponseDTO {
     private Integer id;
 
     private String role;
-
 }

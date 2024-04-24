@@ -9,5 +9,4 @@ public enum RoleType {
     public String getPrefixedName() {
         return "ROLE_" + this.name();
     }
-
 }

@@ -13,5 +13,4 @@ public class RoleConverter {
                 .role(roleEntity.getType().name())
                 .build();
     }
-
 }

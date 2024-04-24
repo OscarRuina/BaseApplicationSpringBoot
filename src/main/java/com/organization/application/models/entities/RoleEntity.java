@@ -51,5 +51,4 @@ public class RoleEntity {
     public RoleEntity(@NotNull RoleType type){
          this.type = type;
     }
-
 }

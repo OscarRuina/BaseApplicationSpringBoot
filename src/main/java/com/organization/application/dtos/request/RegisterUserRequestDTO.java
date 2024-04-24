@@ -26,5 +26,4 @@ public class RegisterUserRequestDTO {
 
     @NotBlank
     private String role;
-
 }

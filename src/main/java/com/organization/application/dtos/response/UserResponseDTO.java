@@ -23,5 +23,4 @@ public class UserResponseDTO {
     private Set<RoleResponseDTO> roles;
 
     private boolean active;
-
 }

@@ -1,19 +1,19 @@
 package com.organization.application.converters;
 
 import com.organization.application.dtos.response.LoginResponseDTO;
-import com.organization.application.dtos.response.RoleResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.models.entities.UserEntity;
-import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("userConverter")
 public class UserConverter {
 
-    @Autowired
-    private RoleConverter roleConverter;
+    private final RoleConverter roleConverter;
+
+    public UserConverter(RoleConverter roleConverter) {
+        this.roleConverter = roleConverter;
+    }
 
     public UserResponseDTO userToUserResponseDTO(UserEntity userEntity){
         return UserResponseDTO.builder()
@@ -22,7 +22,7 @@ public class UserConverter {
                 .lastname(userEntity.getLastname())
                 .email(userEntity.getEmail())
                 .roles(userEntity.getRoleEntities().stream()
-                        .map(roleEntity -> roleConverter.roleToRoleResponseDTO(roleEntity))
+                        .map(roleConverter::roleToRoleResponseDTO)
                             .collect(Collectors.toSet()))
                 .active(userEntity.isActive())
                 .build();
@@ -35,11 +35,10 @@ public class UserConverter {
                 .lastname(userEntity.getLastname())
                 .email(userEntity.getEmail())
                 .roles(userEntity.getRoleEntities().stream()
-                        .map(roleEntity -> roleConverter.roleToRoleResponseDTO(roleEntity))
+                        .map(roleConverter::roleToRoleResponseDTO)
                         .collect(Collectors.toSet()))
                 .active(userEntity.isActive())
                 .token(token)
                 .build();
     }
-
 }
