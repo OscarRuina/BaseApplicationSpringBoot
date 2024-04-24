@@ -28,5 +28,4 @@ public interface IUserService {
 
     UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, BindingResult bindingResult
             , HttpServletRequest request);
-
 }

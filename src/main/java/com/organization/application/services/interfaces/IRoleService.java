@@ -6,5 +6,4 @@ import com.organization.application.models.enums.RoleType;
 public interface IRoleService {
 
     RoleEntity findRoleByType(RoleType roleType);
-
 }

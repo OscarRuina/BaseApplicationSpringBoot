@@ -300,5 +300,4 @@ public class UserService implements IUserService {
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(7);
         return passwordEncoder.encode(password);
     }
-
 }
