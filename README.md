@@ -1,5 +1,8 @@
 # BaseApplicationSpringBoot
 
+* Proyecto Base utilizando SpringBoot, que consta del manejo basico de usuarios, registro y envio de mails. Acceso a distintos puntos de acceso mediante roles utilizando Spring Security y JWT.
+
+
 * Swagger : http://localhost:8085/api/swagger-ui/index.html#/
 
 Configurar las variables de entorno para que el archivo application.properties las reconozca antes de iniciar la aplicacion:
