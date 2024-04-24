@@ -67,5 +67,4 @@ public class AuthService implements IAuthService {
         throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
 
     }
-
 }

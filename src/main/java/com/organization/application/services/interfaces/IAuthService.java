@@ -8,6 +8,4 @@ import org.springframework.validation.BindingResult;
 public interface IAuthService {
 
     LoginResponseDTO login(LoginRequestDTO loginRequestDTO, BindingResult bindingResult);
-
-
 }
