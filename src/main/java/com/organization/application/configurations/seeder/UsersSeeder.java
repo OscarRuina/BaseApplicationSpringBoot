@@ -38,7 +38,7 @@ public class UsersSeeder implements CommandLineRunner {
     }
 
     private void loadUser() {
-        userRepository.save(buildUserUser("Consulta","Consulta","consulta@hotmail.com",passwordGeneric));
+        userRepository.save(buildUserUser("user","user","user@hotmail.com",passwordGeneric));
     }
 
     private UserEntity buildUserUser(String firstName, String lastName, String email, String password) {
@@ -53,7 +53,7 @@ public class UsersSeeder implements CommandLineRunner {
     }
 
     private void loadUserAdmin() {
-        userRepository.save(buildUserAdmin("Oscar","Ruina","oscarruina@hotmail.com",passwordGeneric));
+        userRepository.save(buildUserAdmin("admin","admin","admin@gmail.com",passwordGeneric));
     }
 
     private UserEntity buildUserAdmin(String firstName, String lastName, String email, String password) {
