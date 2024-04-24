@@ -64,7 +64,6 @@ public class JwtUtil {
             log.error("ERROR Invalid Token ".concat(e.getMessage()));
             throw new InvalidTokenException(ExceptionMessages.INVALIDATE_TOKEN,e);
         }
-
     }
 
     //4 - Get Claims From Token
@@ -96,5 +95,4 @@ public class JwtUtil {
     public Boolean isTokenExpired(String token){
         return getExpiration(token).before(new Date());
     }
-
 }

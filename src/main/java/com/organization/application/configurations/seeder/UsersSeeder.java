@@ -6,7 +6,6 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -16,11 +15,14 @@ public class UsersSeeder implements CommandLineRunner {
 
     private static final String passwordGeneric = "foo1234";
 
-    @Autowired
-    private IUserRepository userRepository;
+    private final IUserRepository userRepository;
 
-    @Autowired
-    private IRoleRepository roleRepository;
+    private final IRoleRepository roleRepository;
+
+    public UsersSeeder(IUserRepository userRepository, IRoleRepository roleRepository) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+    }
 
     @Override
     public void run(String... args) throws Exception {

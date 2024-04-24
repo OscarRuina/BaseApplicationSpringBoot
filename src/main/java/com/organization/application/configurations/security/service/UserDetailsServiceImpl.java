@@ -4,7 +4,6 @@ import com.organization.application.models.entities.UserEntity;
 import com.organization.application.repositories.IUserRepository;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,10 +16,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    @Autowired
-    private IUserRepository userRepository;
+    private final IUserRepository userRepository;
 
     private UserEntity user;
+
+    public UserDetailsServiceImpl(IUserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -42,5 +44,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserEntity getUser(){
         return user;
     }
-
 }

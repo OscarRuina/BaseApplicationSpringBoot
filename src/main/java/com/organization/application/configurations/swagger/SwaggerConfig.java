@@ -23,5 +23,4 @@ public class SwaggerConfig {
                         .description(DESCRIPTION)
                         .version("v0.0.1"));
     }
-
 }

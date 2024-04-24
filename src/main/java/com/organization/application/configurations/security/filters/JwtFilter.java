@@ -59,7 +59,6 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request,response);
-
     }
 
     private String getToken(HttpServletRequest httpServletRequest){
@@ -69,7 +68,6 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         return null;
     }
-
 }
 
 
