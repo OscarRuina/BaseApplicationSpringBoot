@@ -1,6 +1,7 @@
 package com.organization.application.configurations.security.filters;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.organization.application.dtos.response.ApplicationResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,15 +21,17 @@ public class JwtEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
+
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
+        ApplicationResponse<Object> applicationResponse = new ApplicationResponse<>(null, authException.getMessage());
+
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", HttpServletResponse.SC_UNAUTHORIZED);
-        errorResponse.put("error", "Unauthorized");
-        errorResponse.put("message", authException.getMessage());
-        response.getWriter().write(mapper.writeValueAsString(errorResponse));
+        String jsonResponse = mapper.writeValueAsString(applicationResponse);
+
+        response.getWriter().write(jsonResponse);
+
         log.error("Authentication error: {}", authException.getMessage());
     }
 }

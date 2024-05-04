@@ -259,7 +259,7 @@ public class UserService implements IUserService {
      * @param updateUserRequestDTO
      * @param request
      * @param bindingResult
-     * @return
+     * @return UserResponseDTO
      */
     @Override
     public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO,
