@@ -1,6 +1,7 @@
 package com.organization.application.configurations.email.service;
 
 import com.organization.application.configurations.exceptions.MailSendException;
+import com.organization.application.messages.ExceptionMessages;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
@@ -46,12 +47,12 @@ public class EmailService implements IEmailService{
             String htmlContent = templateEngine.process(TEMPLATE_NEW_USER, context);
             mimeMessageHelper.setText(htmlContent,true);
 
-            ClassPathResource resource = new ClassPathResource("/static/images/logo.jpg");
+            ClassPathResource resource = new ClassPathResource("/static/images/logo.png");
             mimeMessageHelper.addInline("logoImage", resource);
 
             mailSender.send(mimeMessage);
         } catch (MessagingException e) {
-            log.error("Error Sending Mail");
+            log.error(ExceptionMessages.MAIL_ERROR);
             throw new MailSendException(e.getMessage());
         }
     }

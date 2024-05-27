@@ -2,6 +2,7 @@ package com.organization.application.controllers;
 
 import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
+import com.organization.application.configurations.exceptions.MailSendException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
@@ -109,7 +110,8 @@ public class UserController {
             UserResponseDTO dto =  userService.register(registerUserRequestDTO, bindingResult);
             log.info(ResponseMessages.REGISTER_SUCCESSFUL);
             return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL),HttpStatus.OK);
-        }catch (AuthenticationException | UserAlreadyExistException | AttributeErrorsException e) {
+        }catch (AuthenticationException | UserAlreadyExistException | AttributeErrorsException |
+                MailSendException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
