@@ -2,10 +2,6 @@ package com.organization.application.configurations.security;
 
 import com.organization.application.configurations.security.filters.JwtEntryPoint;
 import com.organization.application.configurations.security.filters.JwtFilter;
-import com.organization.application.messages.ConstantsMessages;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,8 +19,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@SecurityScheme(name = ConstantsMessages.SWAGGER_SECURITY_SCHEME_NAME, in = SecuritySchemeIn.HEADER,
-        type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 public class WebSecurityConfig {
 
     private final JwtFilter jwtFilter;

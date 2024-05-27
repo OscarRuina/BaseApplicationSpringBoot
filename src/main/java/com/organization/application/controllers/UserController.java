@@ -15,6 +15,8 @@ import com.organization.application.messages.SwaggerMessages;
 import com.organization.application.services.interfaces.IUserService;
 import com.organization.application.dtos.response.ApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -96,6 +98,13 @@ public class UserController {
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = SwaggerMessages.USER_REGISTER_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = RegisterUserRequestDTO.class)
+            )
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_REGISTER_RESPONSE_200),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
@@ -249,6 +258,13 @@ public class UserController {
 
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = SwaggerMessages.USER_UPDATE_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = UpdateUserRequestDTO.class)
+            )
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_RESPONSE_200),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
