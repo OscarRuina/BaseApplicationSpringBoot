@@ -20,7 +20,9 @@ import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.interfaces.IRoleService;
 import com.organization.application.services.interfaces.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -112,8 +114,9 @@ public class UserService implements IUserService {
                         )
                 );
                 String[] toUser = {registerUserRequestDTO.getEmail()};
-                String message = "Su usuario es: " + registerUserRequestDTO.getEmail() + " y su contraseña es: "
-                        + registerUserRequestDTO.getPassword();
+                Map<String, Object> message = new HashMap<>();
+                message.put("username", registerUserRequestDTO.getEmail());
+                message.put("password", registerUserRequestDTO.getPassword());
                 emailService.sendEmail(toUser, EMAIL_SUBJECT, message);
                 return dto;
             }else {
