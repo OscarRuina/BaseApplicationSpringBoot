@@ -9,6 +9,8 @@ import com.organization.application.messages.SwaggerMessages;
 import com.organization.application.services.implementations.AuthService;
 import com.organization.application.dtos.response.ApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +40,13 @@ public class SecurityController {
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = SwaggerMessages.LOGIN_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = LoginRequestDTO.class)
+            )
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.LOGIN_RESPONSE_200),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),

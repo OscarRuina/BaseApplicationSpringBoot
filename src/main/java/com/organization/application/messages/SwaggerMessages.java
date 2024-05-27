@@ -4,6 +4,21 @@ public final class SwaggerMessages {
 
     private SwaggerMessages(){}
 
+    //Config Messages
+    public static final String TITTLE = "Spring Base Application";
+
+    public static final String DESCRIPTION = "Base app to manage users and permissions";
+
+    public static final String SERVER_DESCRIPTION = "Developer Server";
+
+    public static final String SERVER_URL = "http://localhost:8085/api";
+
+    public static final String SECURITY_DESCRIPTION = "Security using JWT";
+
+    public static final String SECURITY_SCHEME_NAME = "bearer";
+
+    public static final String SECURITY_BEARER_FORMAT = "JWT";
+
     //Common Messages
     public static final String ERROR_RESPONSE_400 = "Invalid request";
 
