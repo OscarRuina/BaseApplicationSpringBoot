@@ -2,6 +2,7 @@ package com.organization.application.controllers;
 
 import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
+import com.organization.application.configurations.exceptions.MailSendException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
@@ -10,9 +11,16 @@ import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ConstantsMessages;
 import com.organization.application.messages.ResponseMessages;
+import com.organization.application.messages.SwaggerMessages;
 import com.organization.application.services.interfaces.IUserService;
 import com.organization.application.dtos.response.ApplicationResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -36,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/users")
 @SecurityRequirement(name = ConstantsMessages.SWAGGER_SECURITY_SCHEME_NAME)
+@Tag(name = "User Controller")
 public class UserController {
 
     private final IUserService userService;
@@ -45,6 +54,12 @@ public class UserController {
     }
 
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_ME_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_ME_RESPONSE_200),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<LoginResponseDTO>> me(HttpServletRequest request){
         log.info("GET:api/users/me");
@@ -60,6 +75,12 @@ public class UserController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_ALL_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_ALL_RESPONSE_200),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<List<UserResponseDTO>>> findUsers() {
         log.info("GET:api/users");
@@ -76,6 +97,20 @@ public class UserController {
 
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_REGISTER_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = RegisterUserRequestDTO.class)
+            )
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_REGISTER_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO,
             BindingResult bindingResult){
@@ -84,7 +119,8 @@ public class UserController {
             UserResponseDTO dto =  userService.register(registerUserRequestDTO, bindingResult);
             log.info(ResponseMessages.REGISTER_SUCCESSFUL);
             return new ResponseEntity<>(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL),HttpStatus.OK);
-        }catch (AuthenticationException | UserAlreadyExistException | AttributeErrorsException e) {
+        }catch (AuthenticationException | UserAlreadyExistException | AttributeErrorsException |
+                MailSendException e) {
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, e.getMessage()),
                     HttpStatus.BAD_REQUEST);
@@ -96,6 +132,12 @@ public class UserController {
     }
 
     @GetMapping(value = "/active",produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_ALL_ACTIVE_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_ALL_ACTIVE_RESPONSE_200),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<List<UserResponseDTO>>> findUsersActive() {
         log.info("GET:api/users/active");
@@ -111,9 +153,16 @@ public class UserController {
     }
 
     @GetMapping(value = "/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_FIND_ID_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_FIND_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> findUser(@PathVariable(name = "id") Integer id) {
-        log.info("GET:api/users/id");
+        log.info("GET:api/users/{}", id);
         try{
             UserResponseDTO dto =  userService.findUser(id);
             log.info(ResponseMessages.GET_USER_SUCCESSFUL);
@@ -130,9 +179,16 @@ public class UserController {
     }
 
     @DeleteMapping(value = "/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_DELETE_ID_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_DELETE_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> deleteUser(@PathVariable(name = "id") Integer id, HttpServletRequest request) {
-        log.info("DELETE:api/users/id");
+        log.info("DELETE:api/users/{}", id);
         try{
             UserResponseDTO dto =  userService.delete(id,request);
             log.info(ResponseMessages.DELETE_USER_SUCCESSFUL);
@@ -149,9 +205,16 @@ public class UserController {
     }
 
     @PutMapping(value = "/status/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_UPDATE_STATUS_ID_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_STATUS_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateStatusUser(@PathVariable(name = "id") Integer id, HttpServletRequest request) {
-        log.info("PUT:api/users/status/id");
+        log.info("PUT:api/users/status/{}", id);
         try{
             UserResponseDTO dto =  userService.updateStatus(id,request);
             log.info(ResponseMessages.UPDATE_STATUS_SUCCESSFUL);
@@ -168,6 +231,13 @@ public class UserController {
     }
 
     @PutMapping(value = "/roles/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_UPDATE_ROLE_ID_OPERATION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_ROLE_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateRoleUser(@PathVariable(name = "id") Integer id, @RequestParam(name = "role") String role) {
         log.info("PUT:api/users/roles/id");
@@ -187,6 +257,20 @@ public class UserController {
     }
 
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_UPDATE_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = UpdateUserRequestDTO.class)
+            )
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateUser(@Valid @RequestBody
             UpdateUserRequestDTO updateUserRequestDTO, BindingResult bindingResult, HttpServletRequest request) {
