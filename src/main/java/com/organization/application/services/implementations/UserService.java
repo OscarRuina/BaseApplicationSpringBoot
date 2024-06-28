@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.CharacterPredicates;
+import org.apache.commons.text.RandomStringGenerator;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -104,13 +106,18 @@ public class UserService implements IUserService {
             RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
             log.info(role.getType().name());
             if (registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
+                RandomStringGenerator generator = new RandomStringGenerator.Builder()
+                        .withinRange('0', 'z')
+                        .filteredBy(CharacterPredicates.DIGITS, CharacterPredicates.LETTERS)
+                        .build();
+                String temporaryPassword = generator.generate(8,12);
                 UserResponseDTO dto =  userConverter.userToUserResponseDTO(
                         userRepository.save(
                                 UserEntity.builder()
                                         .firstname(registerUserRequestDTO.getFirstname())
                                         .lastname(registerUserRequestDTO.getLastname())
                                         .email(registerUserRequestDTO.getEmail())
-                                        .password(encryptPassword(registerUserRequestDTO.getPassword()))
+                                        .password(encryptPassword(temporaryPassword))
                                         .active(true)
                                         .roleEntities(Set.of(role))
                                         .build()
@@ -119,7 +126,7 @@ public class UserService implements IUserService {
                 String[] toUser = {registerUserRequestDTO.getEmail()};
                 Map<String, Object> message = new HashMap<>();
                 message.put("username", registerUserRequestDTO.getEmail());
-                message.put("password", registerUserRequestDTO.getPassword());
+                message.put("password", temporaryPassword);
                 CompletableFuture.runAsync(() -> emailService.sendEmail(toUser, EMAIL_SUBJECT, message));
                 return dto;
             }else {
