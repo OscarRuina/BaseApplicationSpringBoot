@@ -9,6 +9,7 @@
   * TOKEN_SECRET_KEY -> colocar un hash que sea tu secret key.
   * EMAIL -> colocar el mail que se encargara de enviar mails.
   * EMAIL_PASSWORD -> colocar la contraseña de aplicacion generada para el mail.
+  * BASE_URL -> colocar la url de una api publica.
 * Ejecutar la aplicacion.
 * En la carpeta de configurations/seeder una vez creadas las tablas de la bd se ejecuta la clase UsersSeeder que inicializa la bd con dos usuarios:
   * username: admin@gmail.com password: foo1234.
