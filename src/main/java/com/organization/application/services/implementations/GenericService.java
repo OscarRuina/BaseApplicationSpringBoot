@@ -32,7 +32,7 @@ public class GenericService implements IGenericService {
 
     @Override
     public List<Object> findAll(String partialUrl) {
-        log.info("Inside Service post, method findAll, base URL: " + api_url);
+        log.info("Inside GenericService, method findAll, base URL: " + api_url);
         String url = api_url + "/" + partialUrl;
         log.info("URL: " + url);
         Object[] posts = restTemplate.getForObject(url, Object[].class);
