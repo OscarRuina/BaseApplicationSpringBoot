@@ -27,7 +27,21 @@ public class GenericService implements IGenericService {
         log.info("Inside Service post, method findById, base URL: " + api_url);
         String url = api_url + "/" + partialUrl + "/" + id;
         log.info("URL: " + url);
-        return restTemplate.getForObject(url, Object.class);
+        Object response;
+        try {
+            response = restTemplate.getForObject(url, Object.class);
+        }
+        catch (RuntimeException exception) {
+            log.error("Error calling API for URL: {}", url, exception);
+            throw new RuntimeException("ERROR getting object by id", exception);
+        }
+        if (response != null) {
+            return response;
+        }
+        else {
+            log.error("Object is null");
+            throw new RuntimeException("ERROR Object is null");
+        }
     }
 
     @Override
