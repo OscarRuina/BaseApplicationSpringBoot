@@ -29,7 +29,7 @@ public class GenericController {
         log.info("GET:api/objects/{}", id);
         try{
             Object dto = genericService.findObjectById(partialUrl,id);
-            return new ResponseEntity<>(new ApplicationResponse<>(dto, "Post Get Successful"), HttpStatus.OK);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto, "Object Get Successful"), HttpStatus.OK);
         }catch (Exception e){
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
