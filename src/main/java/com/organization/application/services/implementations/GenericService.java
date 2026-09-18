@@ -36,7 +36,7 @@ public class GenericService implements IGenericService {
         String url = api_url + "/" + partialUrl;
         log.info("URL: " + url);
         Object[] posts = restTemplate.getForObject(url, Object[].class);
-        if( posts != null){
+        if (posts != null) {
             return Arrays.asList(posts);
         }
         else {
