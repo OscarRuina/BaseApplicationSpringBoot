@@ -25,7 +25,7 @@ public class GenericService implements IGenericService {
     @Override
     public Object findObjectById(String partialUrl, Integer id) {
         log.info("Inside Service post, method findById, base URL: " + api_url);
-        String url = api_url + "/"+ partialUrl +"/" + id;
+        String url = api_url + "/" + partialUrl + "/" + id;
         log.info("URL: " + url);
         return restTemplate.getForObject(url, Object.class);
     }
