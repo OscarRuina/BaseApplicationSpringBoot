@@ -43,7 +43,7 @@ public class GenericController {
         log.info("GET:api/objects");
         try{
             List<Object> dto = genericService.findAll(partialUrl);
-            return new ResponseEntity<>(new ApplicationResponse<>(dto, "Post Get All Successful"), HttpStatus.OK);
+            return new ResponseEntity<>(new ApplicationResponse<>(dto, "Objects Get All Successful"), HttpStatus.OK);
         }catch (RuntimeException e){
             log.error("{}", e.getMessage());
             return new ResponseEntity<>(new ApplicationResponse<>(null, ResponseMessages.ERROR),
