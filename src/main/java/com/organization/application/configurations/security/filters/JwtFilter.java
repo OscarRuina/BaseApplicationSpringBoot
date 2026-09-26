@@ -1,6 +1,7 @@
 package com.organization.application.configurations.security.filters;
 
 import com.organization.application.configurations.security.jwt.JwtUtil;
+import com.organization.application.configurations.security.service.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,6 +55,13 @@ public class JwtFilter extends OncePerRequestFilter {
         String username = jwtUtil.getUsername(token);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        UserPrincipal principal = (UserPrincipal) userDetails;
+
+        if (!principal.getEntity().isActive()){
+            log.debug("Token of an inactive user rejected. Username: {}", username);
+            return;
+        }
+
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken
                         (userDetails, null, userDetails.getAuthorities());

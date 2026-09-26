@@ -13,6 +13,7 @@ import com.organization.application.services.interfaces.IAuthService;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -48,17 +49,15 @@ public class AuthService implements IAuthService {
                     new UsernamePasswordAuthenticationToken(loginRequestDTO.getUsername(),
                             loginRequestDTO.getPassword())
             );
+        }catch (DisabledException e){
+            log.error(ExceptionMessages.USER_NOT_ACTIVE);
+            throw new AuthenticationException(ExceptionMessages.USER_NOT_ACTIVE);
         }catch (Exception e){
             log.error("{}", e.getMessage());
             throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
         }
 
         UserEntity user = ((UserPrincipal) authentication.getPrincipal()).getEntity();
-
-        if (!user.isActive()){
-            log.error(ExceptionMessages.USER_NOT_ACTIVE);
-            throw new AuthenticationException(ExceptionMessages.USER_NOT_ACTIVE);
-        }
 
         String token = jwtUtil.createToken(user.getEmail(),
                 user.getRoleEntities().stream()
