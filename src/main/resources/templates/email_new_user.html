@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro Nuevo Usuario</title>
+  <style>
+        .header {
+            background-color: #f2f2f2;
+            padding: 10px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f2f2f2;
+            padding: 10px;
+            text-align: center;
+        }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="cid:logoImage" alt="Logo">
+  </div>
+  <div class="content">
+    <p>
+      Bienvenido, nos comunicamos con usted para informarle que ya es parte de la
+      <span style="font-weight: bold; font-size: 15px;"> aplicación de NOMBRE</span>
+    </p>
+    <br>
+    <p>
+      Para comenzar ingresa utilizando las
+      <span style="font-weight: bold; font-size: 15px;">siguientes credenciales</span>:
+    </p>
+    <p>
+      Usuario: <span th:text="${username}"></span>
+      <br/>
+      Contraseña: <span th:text="${password}"></span>
+    </p>
+    <br>
+    <p>
+      Muchas gracias, seguimos en contacto. <br/>
+      Equipo NOMBRE
+    </p>
+  </div>
+  <div class="footer">
+    <span>
+      Si tenés alguna consulta, no dudes en escribinos a:
+      <!-- <a href="mailto:soporte@company.com.ar" th:text="${data.supportMail}"></a> -->
+      MAIL
+    </span>
+  </div>
+</body>
+</html>
