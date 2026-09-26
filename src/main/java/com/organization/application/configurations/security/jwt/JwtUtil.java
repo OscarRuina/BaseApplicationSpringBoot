@@ -22,12 +22,15 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class JwtUtil {
 
-    //encrypted key generator online
-    @Value("${jwt.token.secretKey}")
-    private String secretKey;
+    private final String secretKey;
 
-    @Value("${jwt.token.expiration}")
-    private String timeExpiration;
+    private final long timeExpiration;
+
+    public JwtUtil(@Value("${jwt.token.secretKey}") String secretKey,
+            @Value("${jwt.token.expiration}") long timeExpiration) {
+        this.secretKey = secretKey;
+        this.timeExpiration = timeExpiration;
+    }
 
     /** Necessary Methods to manage Tokens **/
     //1 - Create Token
@@ -40,7 +43,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + Long.parseLong(timeExpiration)))
+                .setExpiration(new Date(System.currentTimeMillis() + timeExpiration))
                 .signWith(getSignatureKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

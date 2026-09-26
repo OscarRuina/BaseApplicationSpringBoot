@@ -22,5 +22,7 @@ public final class ExceptionMessages {
 
     public static final String INVALID_ATTRIBUTES = "ERROR One or More Attributes has errors";
 
+    public static final String FORBIDDEN = "ERROR Access Denied";
+
     public static final String MAIL_ERROR = "ERROR Sending Mail";
 }

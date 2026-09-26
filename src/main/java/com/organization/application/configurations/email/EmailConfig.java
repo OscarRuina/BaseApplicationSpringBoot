@@ -10,11 +10,19 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 @Configuration
 public class EmailConfig {
 
-    @Value("${email.sender}")
-    private String emailUser;
+    private final String emailUser;
 
-    @Value("${email.password}")
-    private String password;
+    private final String password;
+
+    private final boolean debug;
+
+    public EmailConfig(@Value("${email.sender}") String emailUser,
+            @Value("${email.password}") String password,
+            @Value("${email.debug:false}") boolean debug) {
+        this.emailUser = emailUser;
+        this.password = password;
+        this.debug = debug;
+    }
 
     @Bean
     public JavaMailSender getJavaMailSender() {
@@ -30,7 +38,7 @@ public class EmailConfig {
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.debug", "true");
+        props.put("mail.debug", String.valueOf(debug));
 
         return mailSender;
     }

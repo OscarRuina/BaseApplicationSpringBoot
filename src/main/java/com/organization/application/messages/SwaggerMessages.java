@@ -24,7 +24,15 @@ public final class SwaggerMessages {
 
     public static final String ERROR_RESPONSE_401 = "Unauthorized";
 
+    public static final String ERROR_RESPONSE_403 = "Forbidden";
+
+    public static final String ERROR_RESPONSE_404 = "Not found";
+
+    public static final String ERROR_RESPONSE_409 = "Conflict";
+
     public static final String ERROR_RESPONSE_500 = "Internal server error";
+
+    public static final String ERROR_RESPONSE_502 = "Bad gateway";
 
     //Security Controller Messages
     public static final String LOGIN_OPERATION = "Login user with username and password and then "

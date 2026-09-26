@@ -18,18 +18,19 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 @Slf4j
 public class EmailService implements IEmailService{
 
-    @Value("${email.sender}")
-    private String emailUser;
-
     private static final String TEMPLATE_NEW_USER = "email_new_user";
 
     private final JavaMailSender mailSender;
 
     private final SpringTemplateEngine templateEngine;
 
-    public EmailService(JavaMailSender mailSender, SpringTemplateEngine templateEngine) {
+    private final String emailUser;
+
+    public EmailService(JavaMailSender mailSender, SpringTemplateEngine templateEngine,
+            @Value("${email.sender}") String emailUser) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
+        this.emailUser = emailUser;
     }
 
     @Override

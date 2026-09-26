@@ -6,22 +6,30 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("dev")
 public class UsersSeeder implements CommandLineRunner {
-
-    private static final String passwordGeneric = "foo1234";
 
     private final IUserRepository userRepository;
 
     private final IRoleRepository roleRepository;
 
-    public UsersSeeder(IUserRepository userRepository, IRoleRepository roleRepository) {
+    private final PasswordEncoder passwordEncoder;
+
+    private final String seedPassword;
+
+    public UsersSeeder(IUserRepository userRepository, IRoleRepository roleRepository,
+            PasswordEncoder passwordEncoder, @Value("${app.seed.password}") String seedPassword) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.seedPassword = seedPassword;
     }
 
     @Override
@@ -38,7 +46,7 @@ public class UsersSeeder implements CommandLineRunner {
     }
 
     private void loadUser() {
-        userRepository.save(buildUserUser("user","user","user@hotmail.com",passwordGeneric));
+        userRepository.save(buildUserUser("user","user","user@hotmail.com",seedPassword));
     }
 
     private UserEntity buildUserUser(String firstName, String lastName, String email, String password) {
@@ -47,13 +55,13 @@ public class UsersSeeder implements CommandLineRunner {
                 .lastname(lastName)
                 .email(email)
                 .active(true)
-                .password(encryptPassword(password))
-                .roleEntities(Set.of(roleRepository.findByType(RoleType.USER).get()))
+                .password(passwordEncoder.encode(password))
+                .roleEntities(Set.of(roleRepository.findByType(RoleType.USER).orElseThrow()))
                 .build();
     }
 
     private void loadUserAdmin() {
-        userRepository.save(buildUserAdmin("admin","admin","admin@gmail.com",passwordGeneric));
+        userRepository.save(buildUserAdmin("admin","admin","admin@gmail.com",seedPassword));
     }
 
     private UserEntity buildUserAdmin(String firstName, String lastName, String email, String password) {
@@ -62,8 +70,8 @@ public class UsersSeeder implements CommandLineRunner {
                 .lastname(lastName)
                 .email(email)
                 .active(true)
-                .password(encryptPassword(password))
-                .roleEntities(Set.of(roleRepository.findByType(RoleType.ADMIN).get()))
+                .password(passwordEncoder.encode(password))
+                .roleEntities(Set.of(roleRepository.findByType(RoleType.ADMIN).orElseThrow()))
                 .build();
     }
 
@@ -78,10 +86,5 @@ public class UsersSeeder implements CommandLineRunner {
         return RoleEntity.builder()
                 .type(roleType)
                 .build();
-    }
-
-    private String encryptPassword(String password) {
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(7);
-        return passwordEncoder.encode(password);
     }
 }
