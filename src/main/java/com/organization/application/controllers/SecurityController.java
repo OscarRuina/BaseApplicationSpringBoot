@@ -16,7 +16,6 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,10 +49,9 @@ public class SecurityController {
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO,
-            BindingResult bindingResult){
+    public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
         log.info("POST:api/auth/login");
-        LoginResponseDTO dto=  authService.login(loginRequestDTO,bindingResult);
+        LoginResponseDTO dto=  authService.login(loginRequestDTO);
         log.info(ResponseMessages.LOGIN_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.LOGIN_SUCCESSFUL));
     }

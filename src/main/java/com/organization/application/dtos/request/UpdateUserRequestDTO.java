@@ -16,6 +16,5 @@ public class UpdateUserRequestDTO {
     @NotBlank
     private String lastname;
 
-    @NotBlank
     private String password;
 }

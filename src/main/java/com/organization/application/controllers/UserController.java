@@ -23,7 +23,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -101,10 +100,9 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO,
-            BindingResult bindingResult){
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO){
         log.info("POST:api/users/register");
-        UserResponseDTO dto =  userService.register(registerUserRequestDTO, bindingResult);
+        UserResponseDTO dto =  userService.register(registerUserRequestDTO);
         log.info(ResponseMessages.REGISTER_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL));
     }
@@ -216,10 +214,10 @@ public class UserController {
     })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateUser(@Valid @RequestBody
-            UpdateUserRequestDTO updateUserRequestDTO, BindingResult bindingResult,
+            UpdateUserRequestDTO updateUserRequestDTO,
             @AuthenticationPrincipal UserPrincipal principal) {
         log.info("PUT:api/users/");
-        UserResponseDTO dto =  userService.updateUser(updateUserRequestDTO,bindingResult,
+        UserResponseDTO dto =  userService.updateUser(updateUserRequestDTO,
                 principal.getUsername());
         log.info(ResponseMessages.UPDATE_USER_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_USER_SUCCESSFUL));

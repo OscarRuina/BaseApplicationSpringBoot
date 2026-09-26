@@ -1,7 +1,6 @@
 package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.email.service.IEmailService;
-import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.ForbiddenException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
@@ -26,7 +25,6 @@ import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BindingResult;
 
 @Service
 @Slf4j
@@ -75,11 +73,8 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, BindingResult bindingResult) {
+    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
         log.info("Inside user service method register");
-        if (bindingResult.hasErrors()){
-            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
-        }
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
@@ -210,7 +205,7 @@ public class UserService implements IUserService {
         }
 
         if (user.getEmail().equalsIgnoreCase(callerEmail)){
-            throw new ForbiddenException(ExceptionMessages.CANT_DELETE);
+            throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_STATUS);
         }
 
         user.setActive(true);
@@ -249,20 +244,18 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO,
-            BindingResult bindingResult, String callerEmail) {
+    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail) {
         log.info("Inside user service method update user ");
-
-        if (bindingResult.hasErrors()){
-            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
-        }
 
         UserEntity user = userRepository.findByEmail(callerEmail).orElseThrow(
                 () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
 
         user.setFirstname(updateUserRequestDTO.getFirstname());
         user.setLastname(updateUserRequestDTO.getLastname());
-        user.setPassword(passwordEncoder.encode(updateUserRequestDTO.getPassword()));
+
+        if (updateUserRequestDTO.getPassword() != null && !updateUserRequestDTO.getPassword().isBlank()){
+            user.setPassword(passwordEncoder.encode(updateUserRequestDTO.getPassword()));
+        }
 
         return userConverter.userToUserResponseDTO(userRepository.save(user));
     }

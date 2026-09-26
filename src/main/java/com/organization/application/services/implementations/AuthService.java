@@ -1,6 +1,5 @@
 package com.organization.application.services.implementations;
 
-import com.organization.application.configurations.exceptions.AttributeErrorsException;
 import com.organization.application.configurations.exceptions.AuthenticationException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserPrincipal;
@@ -17,7 +16,6 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BindingResult;
 
 @Service
 @Slf4j
@@ -37,11 +35,8 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public LoginResponseDTO login(LoginRequestDTO loginRequestDTO, BindingResult bindingResult) {
+    public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
         log.info("Inside login");
-        if (bindingResult.hasErrors()){
-            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
-        }
 
         Authentication authentication;
         try {
