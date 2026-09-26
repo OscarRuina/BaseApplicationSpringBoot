@@ -41,7 +41,7 @@ public final class SwaggerMessages {
     public static final String LOGIN_RESPONSE_200 = "User logged successfully";
 
     //User Controller Messages
-    public static final String USER_ME_OPERATION = "Return the user logged in with his token";
+    public static final String USER_ME_OPERATION = "Return the user logged in";
 
     public static final String USER_ME_RESPONSE_200 = "User logged return successfully";
 
