@@ -42,4 +42,16 @@ public final class ExceptionMessages {
     public static final String MAIL_ERROR = "ERROR Sending Mail";
 
     public static final String MAIL_SEND = "ERROR Sending Mail, the user was not created";
+
+    public static final String INVALID_REQUEST = "ERROR Invalid request";
+
+    public static final String RESOURCE_NOT_FOUND = "ERROR Resource not found";
+
+    public static final String METHOD_NOT_ALLOWED = "ERROR Method not allowed";
+
+    public static final String NOT_ACCEPTABLE = "ERROR Not acceptable";
+
+    public static final String UNSUPPORTED_MEDIA_TYPE = "ERROR Unsupported media type";
+
+    public static final String UNAUTHORIZED = "ERROR Unauthenticated or invalid credentials";
 }

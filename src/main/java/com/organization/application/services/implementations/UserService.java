@@ -187,6 +187,12 @@ public class UserService implements IUserService {
                 .anyMatch(roleEntity -> roleEntity.getType() == RoleType.ADMIN);
     }
 
+    private long countActiveAdmins() {
+        return userRepository.findAllByRoleForUpdate(RoleType.ADMIN).stream()
+                .filter(UserEntity::isActive)
+                .count();
+    }
+
     /**
      * Método encargado de eliminar un usuario en la aplicación
      * @param id
@@ -225,6 +231,7 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
+    @Transactional
     public UserResponseDTO updateStatus(Integer id, boolean active, String callerEmail) {
         log.info("Inside user service method update status user by id, active: {}", active);
 
@@ -235,8 +242,11 @@ public class UserService implements IUserService {
             throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_STATUS);
         }
 
-        if (!active && isAdmin(user)
-                && userRepository.countActiveByRole(RoleType.ADMIN) == 1) {
+        if (user.isActive() == active){
+            return userConverter.userToUserResponseDTO(user);
+        }
+
+        if (!active && isAdmin(user) && countActiveAdmins() == 1) {
             throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
         }
 
@@ -253,6 +263,7 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
+    @Transactional
     public UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail) {
         log.info("Inside user service method update role");
 
@@ -270,7 +281,7 @@ public class UserService implements IUserService {
         RoleEntity roleEntity = roleService.findRoleByType(role);
 
         if (isAdmin(user) && roleEntity.getType() != RoleType.ADMIN
-                && userRepository.countActiveByRole(RoleType.ADMIN) == 1) {
+                && countActiveAdmins() == 1) {
             throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
         }
 

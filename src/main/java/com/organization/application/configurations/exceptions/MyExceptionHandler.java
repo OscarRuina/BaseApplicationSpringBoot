@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +20,14 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @Slf4j
 @RestControllerAdvice
 public class MyExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Map<Integer, String> STATUS_MESSAGES = Map.of(
+            HttpStatus.BAD_REQUEST.value(), ExceptionMessages.INVALID_REQUEST,
+            HttpStatus.NOT_FOUND.value(), ExceptionMessages.RESOURCE_NOT_FOUND,
+            HttpStatus.METHOD_NOT_ALLOWED.value(), ExceptionMessages.METHOD_NOT_ALLOWED,
+            HttpStatus.NOT_ACCEPTABLE.value(), ExceptionMessages.NOT_ACCEPTABLE,
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), ExceptionMessages.UNSUPPORTED_MEDIA_TYPE
+    );
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Object> handlerAuthenticationException(AuthenticationException e) {
@@ -117,7 +124,13 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
             return new ResponseEntity<>(body, headers, status);
         }
 
-        return new ResponseEntity<>(new ApplicationResponse<>(null, resolveMessage(ex, body)),
+        if (status.is5xxServerError()){
+            log.error("Request failed with status {}", status, ex);
+        } else {
+            log.warn("Request rejected with status {}: {}", status, ex.getMessage());
+        }
+
+        return new ResponseEntity<>(new ApplicationResponse<>(null, resolveMessage(status)),
                 headers, status);
     }
 
@@ -137,14 +150,8 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
                 headers, status);
     }
 
-    private String resolveMessage(Exception ex, Object body) {
-        if (body instanceof ProblemDetail problemDetail){
-            return problemDetail.getDetail() != null ? problemDetail.getDetail() : ex.getMessage();
-        }
-        if (body instanceof String message && !message.isBlank()){
-            return message;
-        }
-        return ex.getMessage();
+    private String resolveMessage(HttpStatusCode status) {
+        return STATUS_MESSAGES.getOrDefault(status.value(), ResponseMessages.ERROR);
     }
 
     private ResponseEntity<Object> build(HttpStatusCode status, String message) {
