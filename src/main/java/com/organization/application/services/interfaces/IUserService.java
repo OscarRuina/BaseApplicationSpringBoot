@@ -22,7 +22,7 @@ public interface IUserService {
 
     UserResponseDTO updateStatus(Integer id, String callerEmail);
 
-    UserResponseDTO updateRole(Integer id, RoleType role);
+    UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail);
 
     UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail,
             String clientIp);

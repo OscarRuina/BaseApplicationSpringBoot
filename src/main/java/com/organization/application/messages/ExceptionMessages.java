@@ -23,11 +23,13 @@ public final class ExceptionMessages {
 
     public static final String ROLE_NOT_VALID = "ERROR Role Not Valid";
 
-    public static final String CANT_CREATE_USER = "ERROR Cant Create User";
+    public static final String ROLE_NOT_EXIST = "ERROR Role Not Exist";
 
     public static final String CANT_DELETE = "ERROR Cant Delete";
 
     public static final String CANT_UPDATE_STATUS = "ERROR Cant Update User Status";
+
+    public static final String CANT_UPDATE_ROLE = "ERROR Cant Update User Role";
 
     public static final String INVALIDATE_TOKEN = "ERROR validating token";
 

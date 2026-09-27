@@ -61,6 +61,16 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
+    @ExceptionHandler(InvalidRoleException.class)
+    public ResponseEntity<Object> handlerInvalidRoleException(InvalidRoleException e) {
+        return build(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(UserInactiveException.class)
+    public ResponseEntity<Object> handlerUserInactiveException(UserInactiveException e) {
+        return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<Object> handlerInvalidTokenException(InvalidTokenException e) {
         return build(HttpStatus.UNAUTHORIZED, e.getMessage());

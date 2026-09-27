@@ -4,8 +4,10 @@ import com.organization.application.configurations.email.service.IEmailService;
 import com.organization.application.configurations.exceptions.CurrentPasswordInvalidException;
 import com.organization.application.configurations.exceptions.CurrentPasswordRequiredException;
 import com.organization.application.configurations.exceptions.ForbiddenException;
+import com.organization.application.configurations.exceptions.InvalidRoleException;
 import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
+import com.organization.application.configurations.exceptions.UserInactiveException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.configurations.security.throttle.LoginThrottle;
 import com.organization.application.converters.UserConverter;
@@ -93,34 +95,30 @@ public class UserService implements IUserService {
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
             if (registerUserRequestDTO.getRole() != RoleType.USER){
-                throw new ForbiddenException(ExceptionMessages.ROLE_NOT_VALID);
+                throw new InvalidRoleException(ExceptionMessages.ROLE_NOT_VALID);
             }
             RoleEntity role = roleService.findRoleByType(registerUserRequestDTO.getRole());
             log.info(role.getType().name());
-            if (registerUserRequestDTO.getRole() == RoleType.USER){
-                String temporaryPassword = generateTemporaryPassword();
-                UserResponseDTO dto =  userConverter.userToUserResponseDTO(
-                        userRepository.save(
-                                UserEntity.builder()
-                                        .firstname(registerUserRequestDTO.getFirstname())
-                                        .lastname(registerUserRequestDTO.getLastname())
-                                        .email(registerUserRequestDTO.getEmail())
-                                        .password(passwordEncoder.encode(temporaryPassword))
-                                        .active(true)
-                                        .roleEntities(Set.of(role))
-                                        .build()
-                        )
-                );
-                String[] toUser = {registerUserRequestDTO.getEmail()};
-                Map<String, Object> message = new HashMap<>();
-                message.put("username", registerUserRequestDTO.getEmail());
-                message.put("password", temporaryPassword);
-                CompletableFuture.runAsync(() -> emailService.sendEmail(toUser, EMAIL_SUBJECT, message));
-                return dto;
-            }else {
-                log.error(ExceptionMessages.CANT_CREATE_USER);
-                throw new ForbiddenException(ExceptionMessages.CANT_CREATE_USER);
-            }
+
+            String temporaryPassword = generateTemporaryPassword();
+            UserResponseDTO dto =  userConverter.userToUserResponseDTO(
+                    userRepository.save(
+                            UserEntity.builder()
+                                    .firstname(registerUserRequestDTO.getFirstname())
+                                    .lastname(registerUserRequestDTO.getLastname())
+                                    .email(registerUserRequestDTO.getEmail())
+                                    .password(passwordEncoder.encode(temporaryPassword))
+                                    .active(true)
+                                    .roleEntities(Set.of(role))
+                                    .build()
+                    )
+            );
+            String[] toUser = {registerUserRequestDTO.getEmail()};
+            Map<String, Object> message = new HashMap<>();
+            message.put("username", registerUserRequestDTO.getEmail());
+            message.put("password", temporaryPassword);
+            CompletableFuture.runAsync(() -> emailService.sendEmail(toUser, EMAIL_SUBJECT, message));
+            return dto;
         }
     }
 
@@ -187,7 +185,7 @@ public class UserService implements IUserService {
                 () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
 
         if (!user.isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
+            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
 
         if (user.getRoleEntities().stream().anyMatch(
@@ -217,8 +215,8 @@ public class UserService implements IUserService {
         UserEntity user = userRepository.findById(id).orElseThrow(
                 () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
 
-        if (user.isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
+        if (!user.isActive()){
+            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
 
         if (user.getEmail().equalsIgnoreCase(callerEmail)){
@@ -234,19 +232,30 @@ public class UserService implements IUserService {
      * Método encargado de actualizar el rol de un usuario en la aplicación
      * @param id
      * @param role
+     * @param callerEmail
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateRole(Integer id, RoleType role) {
+    public UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail) {
         log.info("Inside user service method update role");
-        if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else{
-            UserEntity user = userRepository.findById(id).get();
-            user.getRoleEntities().add(roleService.findRoleByType(role));
-            userRepository.save(user);
-            return userConverter.userToUserResponseDTO(user);
+
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+
+        if (!user.isActive()){
+            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
+
+        if (user.getEmail().equalsIgnoreCase(callerEmail)){
+            throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_ROLE);
+        }
+
+        RoleEntity roleEntity = roleService.findRoleByType(role);
+
+        user.getRoleEntities().clear();
+        user.getRoleEntities().add(roleEntity);
+
+        return userConverter.userToUserResponseDTO(userRepository.save(user));
     }
 
     /**

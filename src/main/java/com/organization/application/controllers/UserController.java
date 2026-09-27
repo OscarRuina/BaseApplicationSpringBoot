@@ -190,15 +190,20 @@ public class UserController {
     @Operation(summary = SwaggerMessages.USER_UPDATE_ROLE_ID_OPERATION)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_ROLE_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
+            @ApiResponse(responseCode = "409", description = SwaggerMessages.ERROR_RESPONSE_409),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateRoleUser(@PathVariable(name = "id") Integer id, @RequestParam(name = "role") RoleType role) {
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateRoleUser(
+            @PathVariable(name = "id") Integer id,
+            @RequestParam(name = "role") RoleType role,
+            @AuthenticationPrincipal UserPrincipal principal) {
         log.info("PUT:api/users/roles/id");
-        UserResponseDTO dto =  userService.updateRole(id,role);
+        UserResponseDTO dto =  userService.updateRole(id,role,principal.getUsername());
         log.info(ResponseMessages.UPDATE_ROLE_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_ROLE_SUCCESSFUL));
     }
