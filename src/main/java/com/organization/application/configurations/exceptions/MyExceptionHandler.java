@@ -27,6 +27,13 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
+    @ExceptionHandler(AuthenticationServiceUnavailableException.class)
+    public ResponseEntity<Object> handlerAuthenticationServiceUnavailable(
+            AuthenticationServiceUnavailableException e) {
+        log.error("Authentication infrastructure failure", e);
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ResponseMessages.ERROR);
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<Object> handlerForbiddenException(ForbiddenException e) {
         return build(HttpStatus.FORBIDDEN, e.getMessage());

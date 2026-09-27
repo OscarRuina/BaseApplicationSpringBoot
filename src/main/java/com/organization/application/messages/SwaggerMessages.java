@@ -34,6 +34,8 @@ public final class SwaggerMessages {
 
     public static final String ERROR_RESPONSE_502 = "Bad gateway";
 
+    public static final String ERROR_RESPONSE_503 = "Service unavailable";
+
     //Security Controller Messages
     public static final String LOGIN_OPERATION = "Login user with username and password and then "
             + "return the user logged in with his token";

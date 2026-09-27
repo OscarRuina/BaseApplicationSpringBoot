@@ -1,6 +1,7 @@
 package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.exceptions.AuthenticationException;
+import com.organization.application.configurations.exceptions.AuthenticationServiceUnavailableException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserPrincipal;
 import com.organization.application.converters.UserConverter;
@@ -12,6 +13,7 @@ import com.organization.application.services.interfaces.IAuthService;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -36,19 +38,24 @@ public class AuthService implements IAuthService {
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
-        log.info("Inside login");
-
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequestDTO.getUsername(),
                             loginRequestDTO.getPassword())
             );
+        }catch (AuthenticationServiceException e){
+            log.error("Authentication infrastructure failure. Username: {}",
+                    loginRequestDTO.getUsername(), e);
+            throw new AuthenticationServiceUnavailableException(
+                    ExceptionMessages.AUTH_SERVICE_UNAVAILABLE);
         }catch (DisabledException e){
-            log.error(ExceptionMessages.USER_NOT_ACTIVE);
-            throw new AuthenticationException(ExceptionMessages.USER_NOT_ACTIVE);
-        }catch (Exception e){
-            log.error("{}", e.getMessage());
+            log.info("Login rejected: account is not active. Username: {}",
+                    loginRequestDTO.getUsername());
+            throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
+        }catch (org.springframework.security.core.AuthenticationException e){
+            log.debug("Login failed [{}]. Reason: {}", loginRequestDTO.getUsername(),
+                    e.getClass().getSimpleName());
             throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
         }
 

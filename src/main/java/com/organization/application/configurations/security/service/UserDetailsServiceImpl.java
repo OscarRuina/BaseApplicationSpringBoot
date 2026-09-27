@@ -1,5 +1,6 @@
 package com.organization.application.configurations.security.service;
 
+import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.models.entities.UserEntity;
 import com.organization.application.repositories.IUserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,7 +21,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserEntity user = userRepository.findByEmail(username).orElseThrow(
-                () -> new UsernameNotFoundException("ERROR Username not found: " + username)
+                () -> new UsernameNotFoundException(ExceptionMessages.USER_NOT_EXIST)
         );
         return new UserPrincipal(user);
     }

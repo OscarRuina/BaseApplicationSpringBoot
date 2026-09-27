@@ -47,7 +47,8 @@ public class SecurityController {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.LOGIN_RESPONSE_200),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
-            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500),
+            @ApiResponse(responseCode = "503", description = SwaggerMessages.ERROR_RESPONSE_503)
     })
     public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
         log.info("POST:api/auth/login");
