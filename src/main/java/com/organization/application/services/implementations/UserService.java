@@ -1,9 +1,13 @@
 package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.email.service.IEmailService;
+import com.organization.application.configurations.exceptions.CurrentPasswordInvalidException;
+import com.organization.application.configurations.exceptions.CurrentPasswordRequiredException;
 import com.organization.application.configurations.exceptions.ForbiddenException;
+import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
+import com.organization.application.configurations.security.throttle.LoginThrottle;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
@@ -39,6 +43,8 @@ public class UserService implements IUserService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private final LoginThrottle loginThrottle;
+
     private static final String EMAIL_SUBJECT = "Registro de Usuario";
 
     private static final char[] PASSWORD_ALPHABET =
@@ -50,12 +56,14 @@ public class UserService implements IUserService {
 
     public UserService(IUserRepository userRepository, UserConverter userConverter,
             IRoleService roleService,
-            IEmailService emailService, PasswordEncoder passwordEncoder) {
+            IEmailService emailService, PasswordEncoder passwordEncoder,
+            LoginThrottle loginThrottle) {
         this.userRepository = userRepository;
         this.userConverter = userConverter;
         this.roleService = roleService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.loginThrottle = loginThrottle;
     }
 
     /**
@@ -244,24 +252,50 @@ public class UserService implements IUserService {
     /**
      * Método encargado de actualizar el usuario autenticado en la aplicación
      * @param updateUserRequestDTO
-     * @param bindingResult
      * @param callerEmail
+     * @param clientIp
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail) {
-        log.info("Inside user service method update user ");
+    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail,
+            String clientIp) {
+        String newPassword = updateUserRequestDTO.getPassword();
+        boolean passwordChange = newPassword != null && !newPassword.isBlank();
+
+        if (passwordChange) {
+            long retryAfter = loginThrottle.retryAfterSeconds(callerEmail, clientIp);
+            if (retryAfter > 0) {
+                throw new TooManyAttemptsException(ExceptionMessages.TOO_MANY_ATTEMPTS, retryAfter);
+            }
+            if (updateUserRequestDTO.getCurrentPassword() == null
+                    || updateUserRequestDTO.getCurrentPassword().isBlank()) {
+                throw new CurrentPasswordRequiredException(
+                        ExceptionMessages.CURRENT_PASSWORD_REQUIRED);
+            }
+        }
 
         UserEntity user = userRepository.findByEmail(callerEmail).orElseThrow(
                 () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
 
+        if (passwordChange && !passwordEncoder.matches(updateUserRequestDTO.getCurrentPassword(),
+                user.getPassword())) {
+            loginThrottle.recordFailure(callerEmail, clientIp);
+            throw new CurrentPasswordInvalidException(ExceptionMessages.CURRENT_PASSWORD_INVALID);
+        }
+
         user.setFirstname(updateUserRequestDTO.getFirstname());
         user.setLastname(updateUserRequestDTO.getLastname());
 
-        if (updateUserRequestDTO.getPassword() != null && !updateUserRequestDTO.getPassword().isBlank()){
-            user.setPassword(passwordEncoder.encode(updateUserRequestDTO.getPassword()));
+        if (passwordChange) {
+            user.setPassword(passwordEncoder.encode(newPassword));
         }
 
-        return userConverter.userToUserResponseDTO(userRepository.save(user));
+        UserResponseDTO dto = userConverter.userToUserResponseDTO(userRepository.save(user));
+
+        if (passwordChange) {
+            loginThrottle.recordSuccess(callerEmail);
+        }
+
+        return dto;
     }
 }

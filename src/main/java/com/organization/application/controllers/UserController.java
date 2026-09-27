@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -217,15 +218,16 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
+            @ApiResponse(responseCode = "429", description = SwaggerMessages.ERROR_RESPONSE_429),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateUser(@Valid @RequestBody
             UpdateUserRequestDTO updateUserRequestDTO,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserPrincipal principal, HttpServletRequest request) {
         log.info("PUT:api/users/");
         UserResponseDTO dto =  userService.updateUser(updateUserRequestDTO,
-                principal.getUsername());
+                principal.getUsername(), request.getRemoteAddr());
         log.info(ResponseMessages.UPDATE_USER_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_USER_SUCCESSFUL));
     }

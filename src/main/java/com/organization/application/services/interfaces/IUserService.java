@@ -24,5 +24,6 @@ public interface IUserService {
 
     UserResponseDTO updateRole(Integer id, RoleType role);
 
-    UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail);
+    UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail,
+            String clientIp);
 }

@@ -42,6 +42,20 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApplicationResponse<>(null, e.getMessage()));
     }
 
+    @ExceptionHandler(CurrentPasswordRequiredException.class)
+    public ResponseEntity<Object> handlerCurrentPasswordRequired(
+            CurrentPasswordRequiredException e) {
+        log.warn(e.getMessage());
+        return build(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(CurrentPasswordInvalidException.class)
+    public ResponseEntity<Object> handlerCurrentPasswordInvalid(
+            CurrentPasswordInvalidException e) {
+        log.warn(e.getMessage());
+        return build(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<Object> handlerForbiddenException(ForbiddenException e) {
         return build(HttpStatus.FORBIDDEN, e.getMessage());

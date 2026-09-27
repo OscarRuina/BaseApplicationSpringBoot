@@ -21,4 +21,7 @@ public class UpdateUserRequestDTO {
     @Pattern(regexp = "^[\\x20-\\x7E]+$")
     @Size(min = 12, max = 72)
     private String password;
+
+    @Size(max = 72)
+    private String currentPassword;
 }
