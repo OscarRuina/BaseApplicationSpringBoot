@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -47,12 +48,14 @@ public class SecurityController {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.LOGIN_RESPONSE_200),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
+            @ApiResponse(responseCode = "429", description = SwaggerMessages.ERROR_RESPONSE_429),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500),
             @ApiResponse(responseCode = "503", description = SwaggerMessages.ERROR_RESPONSE_503)
     })
-    public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO){
+    public ResponseEntity<ApplicationResponse<LoginResponseDTO>> login(
+            @Valid @RequestBody LoginRequestDTO loginRequestDTO, HttpServletRequest request){
         log.info("POST:api/auth/login");
-        LoginResponseDTO dto=  authService.login(loginRequestDTO);
+        LoginResponseDTO dto=  authService.login(loginRequestDTO, request.getRemoteAddr());
         log.info(ResponseMessages.LOGIN_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.LOGIN_SUCCESSFUL));
     }

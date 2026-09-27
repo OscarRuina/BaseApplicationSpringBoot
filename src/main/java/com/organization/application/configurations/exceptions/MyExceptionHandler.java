@@ -34,6 +34,14 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.SERVICE_UNAVAILABLE, ResponseMessages.ERROR);
     }
 
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<Object> handlerTooManyAttempts(TooManyAttemptsException e) {
+        log.warn("Login throttled. Retry after {}s", e.getRetryAfterSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
+                .body(new ApplicationResponse<>(null, e.getMessage()));
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<Object> handlerForbiddenException(ForbiddenException e) {
         return build(HttpStatus.FORBIDDEN, e.getMessage());

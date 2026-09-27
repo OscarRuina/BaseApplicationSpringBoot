@@ -10,6 +10,8 @@ public final class ExceptionMessages {
 
     public static final String AUTH_SERVICE_UNAVAILABLE = "ERROR Authentication service temporarily unavailable";
 
+    public static final String TOO_MANY_ATTEMPTS = "ERROR Too many login attempts";
+
     public static final String USER_ALREADY_EXIST = "ERROR User Already Exist";
 
     public static final String USER_NOT_EXIST = "ERROR User Not Exist";

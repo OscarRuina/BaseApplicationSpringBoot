@@ -2,8 +2,10 @@ package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.exceptions.AuthenticationException;
 import com.organization.application.configurations.exceptions.AuthenticationServiceUnavailableException;
+import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserPrincipal;
+import com.organization.application.configurations.security.throttle.LoginThrottle;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.LoginRequestDTO;
 import com.organization.application.dtos.response.LoginResponseDTO;
@@ -29,15 +31,23 @@ public class AuthService implements IAuthService {
 
     private final UserConverter userConverter;
 
+    private final LoginThrottle loginThrottle;
+
     public AuthService(AuthenticationManager authenticationManager,
-            JwtUtil jwtUtil, UserConverter userConverter) {
+            JwtUtil jwtUtil, UserConverter userConverter, LoginThrottle loginThrottle) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userConverter = userConverter;
+        this.loginThrottle = loginThrottle;
     }
 
     @Override
-    public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+    public LoginResponseDTO login(LoginRequestDTO loginRequestDTO, String clientIp) {
+        long retryAfter = loginThrottle.retryAfterSeconds(loginRequestDTO.getUsername(), clientIp);
+        if (retryAfter > 0) {
+            throw new TooManyAttemptsException(ExceptionMessages.TOO_MANY_ATTEMPTS, retryAfter);
+        }
+
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
@@ -52,12 +62,16 @@ public class AuthService implements IAuthService {
         }catch (DisabledException e){
             log.info("Login rejected: account is not active. Username: {}",
                     loginRequestDTO.getUsername());
+            loginThrottle.recordFailure(loginRequestDTO.getUsername(), clientIp);
             throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
         }catch (org.springframework.security.core.AuthenticationException e){
             log.debug("Login failed [{}]. Reason: {}", loginRequestDTO.getUsername(),
                     e.getClass().getSimpleName());
+            loginThrottle.recordFailure(loginRequestDTO.getUsername(), clientIp);
             throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
         }
+
+        loginThrottle.recordSuccess(loginRequestDTO.getUsername());
 
         UserEntity user = ((UserPrincipal) authentication.getPrincipal()).getEntity();
 

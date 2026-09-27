@@ -5,5 +5,5 @@ import com.organization.application.dtos.response.LoginResponseDTO;
 
 public interface IAuthService {
 
-    LoginResponseDTO login(LoginRequestDTO loginRequestDTO);
+    LoginResponseDTO login(LoginRequestDTO loginRequestDTO, String clientIp);
 }

@@ -30,6 +30,8 @@ public final class SwaggerMessages {
 
     public static final String ERROR_RESPONSE_409 = "Conflict";
 
+    public static final String ERROR_RESPONSE_429 = "Too many requests";
+
     public static final String ERROR_RESPONSE_500 = "Internal server error";
 
     public static final String ERROR_RESPONSE_502 = "Bad gateway";
