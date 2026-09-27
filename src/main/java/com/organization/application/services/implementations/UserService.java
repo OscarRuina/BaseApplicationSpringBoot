@@ -15,14 +15,13 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.interfaces.IRoleService;
 import com.organization.application.services.interfaces.IUserService;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.CharacterPredicates;
-import org.apache.commons.text.RandomStringGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -40,7 +39,14 @@ public class UserService implements IUserService {
 
     private final PasswordEncoder passwordEncoder;
 
-    private static final  String EMAIL_SUBJECT = "Registro de Usuario ";
+    private static final String EMAIL_SUBJECT = "Registro de Usuario";
+
+    private static final char[] PASSWORD_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+
+    private static final int TEMPORARY_PASSWORD_LENGTH = 16;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public UserService(IUserRepository userRepository, UserConverter userConverter,
             IRoleService roleService,
@@ -84,11 +90,7 @@ public class UserService implements IUserService {
             RoleEntity role = roleService.findRoleByType(registerUserRequestDTO.getRole());
             log.info(role.getType().name());
             if (registerUserRequestDTO.getRole() == RoleType.USER){
-                RandomStringGenerator generator = new RandomStringGenerator.Builder()
-                        .withinRange('0', 'z')
-                        .filteredBy(CharacterPredicates.DIGITS, CharacterPredicates.LETTERS)
-                        .build();
-                String temporaryPassword = generator.generate(8,12);
+                String temporaryPassword = generateTemporaryPassword();
                 UserResponseDTO dto =  userConverter.userToUserResponseDTO(
                         userRepository.save(
                                 UserEntity.builder()
@@ -112,6 +114,14 @@ public class UserService implements IUserService {
                 throw new ForbiddenException(ExceptionMessages.CANT_CREATE_USER);
             }
         }
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder(TEMPORARY_PASSWORD_LENGTH);
+        for (int i = 0; i < TEMPORARY_PASSWORD_LENGTH; i++) {
+            password.append(PASSWORD_ALPHABET[SECURE_RANDOM.nextInt(PASSWORD_ALPHABET.length)]);
+        }
+        return password.toString();
     }
 
     /**
