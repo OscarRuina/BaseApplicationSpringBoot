@@ -26,10 +26,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -48,6 +49,8 @@ public class UserService implements IUserService {
     private final LoginThrottle loginThrottle;
 
     private static final String EMAIL_SUBJECT = "Registro de Usuario";
+
+    private static final String TEMPLATE_NEW_USER = "email_new_user";
 
     private static final char[] PASSWORD_ALPHABET =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
@@ -85,10 +88,13 @@ public class UserService implements IUserService {
 
     /**
      * Método encargado de crear un nuevo usuario en la aplicación
+     * La creación del usuario y el envío del mail ocurren dentro de la misma transacción,
+     * por lo que un fallo en el envío revierte el alta y no queda ningún usuario persistido
      * @param registerUserRequestDTO
      * @return UserResponseDTO
      */
     @Override
+    @Transactional
     public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
         log.info("Inside user service method register");
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
@@ -101,24 +107,29 @@ public class UserService implements IUserService {
             log.info(role.getType().name());
 
             String temporaryPassword = generateTemporaryPassword();
-            UserResponseDTO dto =  userConverter.userToUserResponseDTO(
-                    userRepository.save(
-                            UserEntity.builder()
-                                    .firstname(registerUserRequestDTO.getFirstname())
-                                    .lastname(registerUserRequestDTO.getLastname())
-                                    .email(registerUserRequestDTO.getEmail())
-                                    .password(passwordEncoder.encode(temporaryPassword))
-                                    .active(true)
-                                    .roleEntities(Set.of(role))
-                                    .build()
-                    )
-            );
+            UserEntity user = UserEntity.builder()
+                    .firstname(registerUserRequestDTO.getFirstname())
+                    .lastname(registerUserRequestDTO.getLastname())
+                    .email(registerUserRequestDTO.getEmail())
+                    .password(passwordEncoder.encode(temporaryPassword))
+                    .active(true)
+                    .roleEntities(Set.of(role))
+                    .build();
+
+            try {
+                user = userRepository.saveAndFlush(user);
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Concurrent registration detected for email {}",
+                        registerUserRequestDTO.getEmail());
+                throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
+            }
+
             String[] toUser = {registerUserRequestDTO.getEmail()};
             Map<String, Object> message = new HashMap<>();
             message.put("username", registerUserRequestDTO.getEmail());
             message.put("password", temporaryPassword);
-            CompletableFuture.runAsync(() -> emailService.sendEmail(toUser, EMAIL_SUBJECT, message));
-            return dto;
+            emailService.sendEmail(toUser, EMAIL_SUBJECT, TEMPLATE_NEW_USER, message);
+            return userConverter.userToUserResponseDTO(user);
         }
     }
 

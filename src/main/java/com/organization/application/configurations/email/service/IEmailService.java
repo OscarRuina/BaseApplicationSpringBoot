@@ -4,5 +4,5 @@ import java.util.Map;
 
 public interface IEmailService {
 
-    void sendEmail(String[] toUser, String subject, Map<String, Object> message);
+    void sendEmail(String[] toUser, String subject, String template, Map<String, Object> message);
 }

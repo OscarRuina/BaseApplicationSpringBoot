@@ -93,8 +93,8 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(MailSendException.class)
     public ResponseEntity<Object> handlerMailSendException(MailSendException e) {
-        log.warn("Mail delivery failed: {}", e.getMessage());
-        return build(HttpStatus.BAD_GATEWAY, e.getMessage());
+        log.error("Mail delivery failed, transaction rolled back", e);
+        return build(HttpStatus.BAD_GATEWAY, ExceptionMessages.MAIL_SEND);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

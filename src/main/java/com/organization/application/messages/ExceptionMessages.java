@@ -38,4 +38,6 @@ public final class ExceptionMessages {
     public static final String FORBIDDEN = "ERROR Access Denied";
 
     public static final String MAIL_ERROR = "ERROR Sending Mail";
+
+    public static final String MAIL_SEND = "ERROR Sending Mail, the user was not created";
 }
