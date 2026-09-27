@@ -1,7 +1,11 @@
 package com.organization.application.configurations.security.filters;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.organization.application.configurations.exceptions.InvalidTokenException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserPrincipal;
+import com.organization.application.dtos.response.ApplicationResponse;
+import com.organization.application.messages.ResponseMessages;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,13 +13,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -40,20 +49,31 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = getToken(request);
         if (token != null){
             try {
-                if (jwtUtil.isTokenValid(token) && Boolean.FALSE.equals(jwtUtil.isTokenExpired(token))){
-                    authenticate(token, request);
-                }
-            }catch (RuntimeException e){
+                authenticate(jwtUtil.getUsername(token), request);
+            }catch (InvalidTokenException e){
                 log.debug("Token rejected: {}", e.getMessage());
+            }catch (UsernameNotFoundException e){
+                log.debug("Token references a user that no longer exists: {}", e.getUsername());
+            }catch (AuthenticationServiceException | DataAccessException | TransactionException e){
+                log.error("Auth infrastructure failure", e);
+                writeServiceUnavailable(response);
+                return;
             }
         }
 
         filterChain.doFilter(request,response);
     }
 
-    private void authenticate(String token, HttpServletRequest request) {
-        String username = jwtUtil.getUsername(token);
+    private void writeServiceUnavailable(HttpServletResponse response) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
 
+        ObjectMapper mapper = new ObjectMapper();
+        response.getWriter().write(mapper.writeValueAsString(
+                new ApplicationResponse<>(null, ResponseMessages.ERROR)));
+    }
+
+    private void authenticate(String username, HttpServletRequest request) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         UserPrincipal principal = (UserPrincipal) userDetails;
 

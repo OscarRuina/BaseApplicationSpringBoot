@@ -29,6 +29,6 @@ public class JwtEntryPoint implements AuthenticationEntryPoint {
 
         response.getWriter().write(jsonResponse);
 
-        log.error("Authentication error: {}", authException.getMessage());
+        log.warn("Authentication error: {}", authException.getMessage());
     }
 }
