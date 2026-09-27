@@ -1,4 +1,4 @@
-package com.organization.application;
+package com.organization.application.services;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 
+import com.organization.application.AbstractIntegrationTest;
 import com.organization.application.configurations.email.service.IEmailService;
 import com.organization.application.configurations.exceptions.MailSendException;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;

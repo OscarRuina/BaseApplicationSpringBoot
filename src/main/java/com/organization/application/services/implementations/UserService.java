@@ -173,13 +173,9 @@ public class UserService implements IUserService {
     @Override
     public UserResponseDTO findUser(Integer id) {
         log.info("Inside user service method find user by id");
-        if (userRepository.findById(id).isEmpty()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else {
-            return userConverter.userToUserResponseDTO(
-                    userRepository.findById(id).get()
-            );
-        }
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+        return userConverter.userToUserResponseDTO(user);
     }
 
     private boolean isAdmin(UserEntity user) {
