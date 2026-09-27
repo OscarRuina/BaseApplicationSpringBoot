@@ -48,12 +48,14 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = getToken(request);
         if (token != null){
+            String username = null;
             try {
-                authenticate(jwtUtil.getUsername(token), request);
+                username = jwtUtil.getUsername(token);
+                authenticate(username, request);
             }catch (InvalidTokenException e){
                 log.debug("Token rejected: {}", e.getMessage());
             }catch (UsernameNotFoundException e){
-                log.debug("Token references a user that no longer exists: {}", e.getUsername());
+                log.debug("Token references a user that no longer exists: {}", username);
             }catch (AuthenticationServiceException | DataAccessException | TransactionException e){
                 log.error("Auth infrastructure failure", e);
                 writeServiceUnavailable(response);
