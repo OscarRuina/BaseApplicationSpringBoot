@@ -182,6 +182,11 @@ public class UserService implements IUserService {
         }
     }
 
+    private boolean isAdmin(UserEntity user) {
+        return user.getRoleEntities().stream()
+                .anyMatch(roleEntity -> roleEntity.getType() == RoleType.ADMIN);
+    }
+
     /**
      * Método encargado de eliminar un usuario en la aplicación
      * @param id
@@ -199,8 +204,7 @@ public class UserService implements IUserService {
             throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
 
-        if (user.getRoleEntities().stream().anyMatch(
-                roleEntity -> roleEntity.getType().name().equalsIgnoreCase(RoleType.ADMIN.name()))){
+        if (isAdmin(user)){
             throw new ForbiddenException(ExceptionMessages.CANT_DELETE);
         }
 
@@ -216,25 +220,27 @@ public class UserService implements IUserService {
     /**
      * Método encargado de actualizar el estado de un usuario en la aplicación
      * @param id
+     * @param active
      * @param callerEmail
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateStatus(Integer id, String callerEmail) {
-        log.info("Inside user service method update status user by id");
+    public UserResponseDTO updateStatus(Integer id, boolean active, String callerEmail) {
+        log.info("Inside user service method update status user by id, active: {}", active);
 
         UserEntity user = userRepository.findById(id).orElseThrow(
                 () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
-
-        if (!user.isActive()){
-            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
-        }
 
         if (user.getEmail().equalsIgnoreCase(callerEmail)){
             throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_STATUS);
         }
 
-        user.setActive(true);
+        if (!active && isAdmin(user)
+                && userRepository.countActiveByRole(RoleType.ADMIN) == 1) {
+            throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
+        }
+
+        user.setActive(active);
         userRepository.save(user);
         return userConverter.userToUserResponseDTO(user);
     }
@@ -262,6 +268,11 @@ public class UserService implements IUserService {
         }
 
         RoleEntity roleEntity = roleService.findRoleByType(role);
+
+        if (isAdmin(user) && roleEntity.getType() != RoleType.ADMIN
+                && userRepository.countActiveByRole(RoleType.ADMIN) == 1) {
+            throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
+        }
 
         user.getRoleEntities().clear();
         user.getRoleEntities().add(roleEntity);

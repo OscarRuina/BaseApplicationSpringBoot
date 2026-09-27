@@ -2,6 +2,7 @@ package com.organization.application.controllers;
 
 import com.organization.application.configurations.security.service.UserPrincipal;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
+import com.organization.application.dtos.request.UpdateStatusRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ConstantsMessages;
@@ -169,8 +170,16 @@ public class UserController {
 
     @PutMapping(value = "/status/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = SwaggerMessages.USER_UPDATE_STATUS_ID_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = UpdateStatusRequestDTO.class)
+            )
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_UPDATE_STATUS_ID_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
@@ -178,10 +187,12 @@ public class UserController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateStatusUser(
+            @Valid @RequestBody UpdateStatusRequestDTO updateStatusRequestDTO,
             @PathVariable(name = "id") Integer id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        log.info("PUT:api/users/status/{}", id);
-        UserResponseDTO dto =  userService.updateStatus(id,principal.getUsername());
+        log.info("PUT:api/users/status/{} with active: {}", id, updateStatusRequestDTO.getActive());
+        UserResponseDTO dto =  userService.updateStatus(id,updateStatusRequestDTO.getActive(),
+                principal.getUsername());
         log.info(ResponseMessages.UPDATE_STATUS_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.UPDATE_STATUS_SUCCESSFUL));
     }

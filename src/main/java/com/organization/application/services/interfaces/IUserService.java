@@ -20,7 +20,7 @@ public interface IUserService {
 
     UserResponseDTO delete(Integer id, String callerEmail);
 
-    UserResponseDTO updateStatus(Integer id, String callerEmail);
+    UserResponseDTO updateStatus(Integer id, boolean active, String callerEmail);
 
     UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail);
 
