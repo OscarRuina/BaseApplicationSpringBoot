@@ -51,7 +51,7 @@ public final class SwaggerMessages {
 
     public static final String USER_REGISTER_OPERATION = "Return the user created";
 
-    public static final String USER_REGISTER_RESPONSE_200 = "User created successfully";
+    public static final String USER_REGISTER_RESPONSE_201 = "User created successfully";
 
     public static final String USER_ALL_ACTIVE_OPERATION = "Return all the active users";
 

@@ -7,6 +7,7 @@ import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ConstantsMessages;
 import com.organization.application.messages.ResponseMessages;
 import com.organization.application.messages.SwaggerMessages;
+import com.organization.application.models.enums.RoleType;
 import com.organization.application.services.interfaces.IUserService;
 import com.organization.application.dtos.response.ApplicationResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
 @RestController
@@ -72,7 +74,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<List<UserResponseDTO>>> findUsers() {
         log.info("GET:api/users");
         List<UserResponseDTO> dto =  userService.findUsers();
@@ -91,7 +93,7 @@ public class UserController {
             )
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_REGISTER_RESPONSE_200),
+            @ApiResponse(responseCode = "201", description = SwaggerMessages.USER_REGISTER_RESPONSE_201),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
@@ -99,12 +101,17 @@ public class UserController {
             @ApiResponse(responseCode = "502", description = SwaggerMessages.ERROR_RESPONSE_502),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO){
         log.info("POST:api/users/register");
         UserResponseDTO dto =  userService.register(registerUserRequestDTO);
         log.info(ResponseMessages.REGISTER_SUCCESSFUL);
-        return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL));
+        return ResponseEntity.created(
+                        ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/users/{id}")
+                                .buildAndExpand(dto.getId())
+                                .toUri())
+                .body(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL));
     }
 
     @GetMapping(value = "/active",produces = MediaType.APPLICATION_JSON_VALUE)
@@ -115,10 +122,10 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<List<UserResponseDTO>>> findUsersActive() {
         log.info("GET:api/users/active");
-        List<UserResponseDTO> dto =  userService.findUsersActive(true);
+        List<UserResponseDTO> dto =  userService.findActiveUsers();
         log.info(ResponseMessages.GET_ACTIVE_USERS_SUCCESSFUL);
         return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.GET_ACTIVE_USERS_SUCCESSFUL));
     }
@@ -132,7 +139,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> findUser(@PathVariable(name = "id") Integer id) {
         log.info("GET:api/users/{}", id);
         UserResponseDTO dto =  userService.findUser(id);
@@ -149,7 +156,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> deleteUser(
             @PathVariable(name = "id") Integer id,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -168,7 +175,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateStatusUser(
             @PathVariable(name = "id") Integer id,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -187,8 +194,8 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateRoleUser(@PathVariable(name = "id") Integer id, @RequestParam(name = "role") String role) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> updateRoleUser(@PathVariable(name = "id") Integer id, @RequestParam(name = "role") RoleType role) {
         log.info("PUT:api/users/roles/id");
         UserResponseDTO dto =  userService.updateRole(id,role);
         log.info(ResponseMessages.UPDATE_ROLE_SUCCESSFUL);

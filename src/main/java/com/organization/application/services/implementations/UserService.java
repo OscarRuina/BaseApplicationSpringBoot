@@ -78,12 +78,12 @@ public class UserService implements IUserService {
         if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
-            if (!registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
+            if (registerUserRequestDTO.getRole() != RoleType.USER){
                 throw new ForbiddenException(ExceptionMessages.ROLE_NOT_VALID);
             }
-            RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
+            RoleEntity role = roleService.findRoleByType(registerUserRequestDTO.getRole());
             log.info(role.getType().name());
-            if (registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
+            if (registerUserRequestDTO.getRole() == RoleType.USER){
                 RandomStringGenerator generator = new RandomStringGenerator.Builder()
                         .withinRange('0', 'z')
                         .filteredBy(CharacterPredicates.DIGITS, CharacterPredicates.LETTERS)
@@ -128,13 +128,12 @@ public class UserService implements IUserService {
 
     /**
      * Método encargado de buscar todos los usuarios que no han sido eliminados de la aplicación
-     * @param active
      * @return List<UserResponseDTO>
      */
     @Override
-    public List<UserResponseDTO> findUsersActive(boolean active) {
+    public List<UserResponseDTO> findActiveUsers() {
         log.info("Inside user service method find active users");
-        return userRepository.findAllByActive(active).stream()
+        return userRepository.findAllByActive(true).stream()
                 .map(userConverter::userToUserResponseDTO)
                 .toList();
     }
@@ -220,19 +219,15 @@ public class UserService implements IUserService {
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateRole(Integer id, String role) {
+    public UserResponseDTO updateRole(Integer id, RoleType role) {
         log.info("Inside user service method update role");
         if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
             throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
         }else{
-            if (role.equalsIgnoreCase(RoleType.USER.name()) || role.equalsIgnoreCase(RoleType.ADMIN.name())){
-                UserEntity user = userRepository.findById(id).get();
-                user.getRoleEntities().add(roleService.findRoleByType(RoleType.valueOf(role)));
-                userRepository.save(user);
-                return userConverter.userToUserResponseDTO(user);
-            }else {
-                throw new ForbiddenException(ExceptionMessages.ROLE_NOT_VALID);
-            }
+            UserEntity user = userRepository.findById(id).get();
+            user.getRoleEntities().add(roleService.findRoleByType(role));
+            userRepository.save(user);
+            return userConverter.userToUserResponseDTO(user);
         }
     }
 

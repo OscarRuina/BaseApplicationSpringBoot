@@ -3,6 +3,7 @@ package com.organization.application.services.interfaces;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
+import com.organization.application.models.enums.RoleType;
 import java.util.List;
 
 public interface IUserService {
@@ -13,7 +14,7 @@ public interface IUserService {
 
     List<UserResponseDTO> findUsers();
 
-    List<UserResponseDTO> findUsersActive(boolean active);
+    List<UserResponseDTO> findActiveUsers();
 
     UserResponseDTO findUser(Integer id);
 
@@ -21,7 +22,7 @@ public interface IUserService {
 
     UserResponseDTO updateStatus(Integer id, String callerEmail);
 
-    UserResponseDTO updateRole(Integer id, String role);
+    UserResponseDTO updateRole(Integer id, RoleType role);
 
     UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail);
 }
