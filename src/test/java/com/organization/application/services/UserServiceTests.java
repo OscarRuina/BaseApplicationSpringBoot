@@ -141,7 +141,7 @@ class UserServiceTests {
         @Test
         @DisplayName("persists an active user with an encoded temporary password")
         void persistsAnActiveUser() {
-            when(userRepository.findByEmail(OTHER_EMAIL)).thenReturn(Optional.empty());
+            when(userRepository.existsByEmail(OTHER_EMAIL)).thenReturn(false);
             when(roleService.findRoleByType(RoleType.USER)).thenReturn(role(RoleType.USER));
             when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_SECRET);
             when(userRepository.saveAndFlush(any(UserEntity.class)))
@@ -160,8 +160,7 @@ class UserServiceTests {
         @Test
         @DisplayName("rejects an email that is already taken")
         void rejectsDuplicatedEmail() {
-            when(userRepository.findByEmail(OTHER_EMAIL))
-                    .thenReturn(Optional.of(user(1, OTHER_EMAIL, true, RoleType.USER)));
+            when(userRepository.existsByEmail(OTHER_EMAIL)).thenReturn(true);
 
             assertThrows(UserAlreadyExistException.class,
                     () -> userService.register(
@@ -172,7 +171,7 @@ class UserServiceTests {
         @Test
         @DisplayName("rejects any role other than USER")
         void rejectsPrivilegedRegistration() {
-            when(userRepository.findByEmail(OTHER_EMAIL)).thenReturn(Optional.empty());
+            when(userRepository.existsByEmail(OTHER_EMAIL)).thenReturn(false);
 
             assertThrows(InvalidRoleException.class,
                     () -> userService.register(
@@ -183,7 +182,7 @@ class UserServiceTests {
         @Test
         @DisplayName("translates a concurrent insert into a conflict")
         void translatesConcurrentInsert() {
-            when(userRepository.findByEmail(OTHER_EMAIL)).thenReturn(Optional.empty());
+            when(userRepository.existsByEmail(OTHER_EMAIL)).thenReturn(false);
             when(roleService.findRoleByType(RoleType.USER)).thenReturn(role(RoleType.USER));
             when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_SECRET);
             doThrow(new DataIntegrityViolationException("duplicate key"))
@@ -197,7 +196,7 @@ class UserServiceTests {
         @Test
         @DisplayName("sends the welcome mail to the new user")
         void sendsTheWelcomeMail() {
-            when(userRepository.findByEmail(OTHER_EMAIL)).thenReturn(Optional.empty());
+            when(userRepository.existsByEmail(OTHER_EMAIL)).thenReturn(false);
             when(roleService.findRoleByType(RoleType.USER)).thenReturn(role(RoleType.USER));
             when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_SECRET);
             when(userRepository.saveAndFlush(any(UserEntity.class)))
@@ -218,7 +217,7 @@ class UserServiceTests {
         void mapsEveryUser() {
             UserEntity first = user(1, "a@example.com", true, RoleType.USER);
             UserEntity second = user(2, "b@example.com", false, RoleType.ADMIN);
-            when(userRepository.findAll()).thenReturn(List.of(first, second));
+            when(userRepository.findAllByOrderByIdAsc()).thenReturn(List.of(first, second));
             when(userConverter.userToUserResponseDTO(first)).thenReturn(converted);
             when(userConverter.userToUserResponseDTO(second)).thenReturn(converted);
 

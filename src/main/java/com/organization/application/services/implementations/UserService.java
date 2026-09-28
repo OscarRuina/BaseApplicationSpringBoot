@@ -97,7 +97,7 @@ public class UserService implements IUserService {
     @Transactional
     public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
         log.info("Inside user service method register");
-        if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
+        if (userRepository.existsByEmail(registerUserRequestDTO.getEmail())){
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
             if (registerUserRequestDTO.getRole() != RoleType.USER){
@@ -148,7 +148,7 @@ public class UserService implements IUserService {
     @Override
     public List<UserResponseDTO> findUsers() {
         log.info("Inside user service method find users");
-        return userRepository.findAll().stream()
+        return userRepository.findAllByOrderByIdAsc().stream()
                 .map(userConverter::userToUserResponseDTO)
                 .toList();
     }
