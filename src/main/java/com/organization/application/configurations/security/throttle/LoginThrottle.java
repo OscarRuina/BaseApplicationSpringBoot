@@ -165,18 +165,20 @@ public class LoginThrottle {
             ToLongFunction<Attempt> timestamp) {
         while (attempts.size() > maxEntries) {
             String oldestKey = null;
+            Attempt oldestAttempt = null;
             long oldest = Long.MAX_VALUE;
             for (Map.Entry<String, Attempt> entry : attempts.entrySet()) {
                 long value = timestamp.applyAsLong(entry.getValue());
                 if (value < oldest) {
                     oldest = value;
                     oldestKey = entry.getKey();
+                    oldestAttempt = entry.getValue();
                 }
             }
             if (oldestKey == null) {
                 return;
             }
-            attempts.remove(oldestKey);
+            attempts.remove(oldestKey, oldestAttempt);
         }
     }
 
