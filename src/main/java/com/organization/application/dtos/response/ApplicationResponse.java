@@ -1,10 +1,12 @@
 package com.organization.application.dtos.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @JsonPropertyOrder({"data", "message"})
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Data
 @NoArgsConstructor
 public class ApplicationResponse<T>{
