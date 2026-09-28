@@ -50,7 +50,11 @@ public class UserService implements IUserService {
 
     private static final String EMAIL_SUBJECT = "Registro de Usuario";
 
+    private static final String EMAIL_SUBJECT_REACTIVATED = "Credenciales restablecidas";
+
     private static final String TEMPLATE_NEW_USER = "email_new_user";
+
+    private static final String TEMPLATE_REACTIVATED_USER = "email_reactivated_user";
 
     private static final char[] PASSWORD_ALPHABET =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
@@ -139,6 +143,14 @@ public class UserService implements IUserService {
             password.append(PASSWORD_ALPHABET[SECURE_RANDOM.nextInt(PASSWORD_ALPHABET.length)]);
         }
         return password.toString();
+    }
+
+    private void sendTemporaryCredentials(UserEntity user, String temporaryPassword) {
+        String[] toUser = {user.getEmail()};
+        Map<String, Object> message = new HashMap<>();
+        message.put("username", user.getEmail());
+        message.put("password", temporaryPassword);
+        emailService.sendEmail(toUser, EMAIL_SUBJECT_REACTIVATED, TEMPLATE_REACTIVATED_USER, message);
     }
 
     /**
@@ -246,8 +258,18 @@ public class UserService implements IUserService {
             throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
         }
 
+        String temporaryPassword = null;
+        if (active) {
+            temporaryPassword = generateTemporaryPassword();
+            user.setPassword(passwordEncoder.encode(temporaryPassword));
+        }
+
         user.setActive(active);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+
+        if (active) {
+            sendTemporaryCredentials(user, temporaryPassword);
+        }
         return userConverter.userToUserResponseDTO(user);
     }
 

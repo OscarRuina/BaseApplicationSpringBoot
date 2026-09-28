@@ -318,15 +318,20 @@ class UserServiceTests {
     class UpdateStatus {
 
         @Test
-        @DisplayName("reactivates an inactive user")
+        @DisplayName("reactivates an inactive user with fresh credentials sent by mail")
         void reactivatesAnInactiveUser() {
             UserEntity entity = user(2, OTHER_EMAIL, false, RoleType.USER);
             when(userRepository.findById(2)).thenReturn(Optional.of(entity));
             when(userRepository.save(entity)).thenReturn(entity);
+            when(passwordEncoder.encode(anyString())).thenReturn(ENCODED_SECRET);
             stubConversion(entity);
 
             assertSame(converted, userService.updateStatus(2, true, CALLER_EMAIL));
             assertTrue(entity.isActive(), "an inactive user must be reactivated");
+            assertEquals(ENCODED_SECRET, entity.getPassword(),
+                    "the password must be rotated on reactivation");
+            verify(passwordEncoder).encode(anyString());
+            verify(emailService).sendEmail(any(String[].class), anyString(), anyString(), any(Map.class));
         }
 
         @Test
@@ -339,6 +344,7 @@ class UserServiceTests {
 
             assertSame(converted, userService.updateStatus(2, false, CALLER_EMAIL));
             assertFalse(entity.isActive());
+            verifyNoInteractions(emailService);
         }
 
         @Test
@@ -350,6 +356,8 @@ class UserServiceTests {
 
             assertSame(converted, userService.updateStatus(2, true, CALLER_EMAIL));
             verify(userRepository, never()).save(any(UserEntity.class));
+            verifyNoInteractions(emailService);
+            verifyNoInteractions(passwordEncoder);
         }
 
         @Test
