@@ -1,16 +1,33 @@
 package com.organization.application.configurations.security.throttle;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
+import java.util.function.ToLongFunction;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * Limita los intentos de autenticación por cuenta y por dirección de cliente.
+ *
+ * <p>El estado vive en memoria del proceso: con varias instancias hay que balancear por
+ * sesión para que todas compartan el mismo contador, o la protección se multiplica por la
+ * cantidad de pods.
+ *
+ * <p>La dirección de cliente llega desde {@code request.getRemoteAddr()}, que devuelve el proxy
+ * y no al usuario cuando la aplicación corre detrás de un reverse proxy. En ese caso
+ * {@code app.login.throttle.client-max-failures} deja de proteger a una IP y pasa a bloquear a
+ * todos los usuarios a la vez. Ninguna property lo arregla, porque corregirlo del lado de la
+ * aplicación implica confiar en el header {@code X-Forwarded-For}, que el cliente controla. Si el
+ * despliegue va detrás de un proxy, la corrección corresponde a la infraestructura: el proxy debe
+ * resolver la dirección de origen y esta aplicación tomarla desde ahí.
+ */
 @Component
 public class LoginThrottle {
-
-    private static final int MAX_BACKOFF_EXPONENT = 30;
 
     private final ConcurrentMap<String, Attempt> accountAttempts = new ConcurrentHashMap<>();
 
@@ -30,6 +47,9 @@ public class LoginThrottle {
 
     private final int maxEntries;
 
+    private final LongSupplier nanoClock;
+
+    @Autowired
     public LoginThrottle(
             @Value("${app.login.throttle.free-attempts:3}") int freeAttempts,
             @Value("${app.login.throttle.base-delay:1000}") long baseDelayMillis,
@@ -38,6 +58,12 @@ public class LoginThrottle {
             @Value("${app.login.throttle.client-max-failures:30}") int clientMaxFailures,
             @Value("${app.login.throttle.client-window:300000}") long clientWindowMillis,
             @Value("${app.login.throttle.max-entries:10000}") int maxEntries) {
+        this(freeAttempts, baseDelayMillis, maxDelayMillis, resetAfterMillis, clientMaxFailures,
+                clientWindowMillis, maxEntries, System::nanoTime);
+    }
+
+    LoginThrottle(int freeAttempts, long baseDelayMillis, long maxDelayMillis, long resetAfterMillis,
+            int clientMaxFailures, long clientWindowMillis, int maxEntries, LongSupplier nanoClock) {
         this.freeAttempts = freeAttempts;
         this.baseDelayNanos = TimeUnit.MILLISECONDS.toNanos(baseDelayMillis);
         this.maxDelayNanos = TimeUnit.MILLISECONDS.toNanos(maxDelayMillis);
@@ -45,10 +71,11 @@ public class LoginThrottle {
         this.clientMaxFailures = clientMaxFailures;
         this.clientWindowNanos = TimeUnit.MILLISECONDS.toNanos(clientWindowMillis);
         this.maxEntries = maxEntries;
+        this.nanoClock = nanoClock;
     }
 
     public long retryAfterSeconds(String username, String clientAddress) {
-        long now = System.nanoTime();
+        long now = nanoClock.getAsLong();
         long blockedUntil = Math.max(accountBlockedUntil(normalize(username), now),
                 clientBlockedUntil(clientKey(clientAddress), now));
         long remaining = blockedUntil - now;
@@ -60,7 +87,7 @@ public class LoginThrottle {
     }
 
     public void recordFailure(String username, String clientAddress) {
-        long now = System.nanoTime();
+        long now = nanoClock.getAsLong();
         enforceBound();
         accountAttempts.compute(normalize(username), (key, attempt) ->
                 nextAccountAttempt(attempt, now));
@@ -109,25 +136,47 @@ public class LoginThrottle {
     }
 
     private long backoffNanos(int failures) {
-        int exponent = Math.min(failures - freeAttempts - 1, MAX_BACKOFF_EXPONENT);
-        return Math.min(baseDelayNanos << exponent, maxDelayNanos);
+        if (baseDelayNanos <= 0 || maxDelayNanos <= 0) {
+            return 0;
+        }
+        int exponent = Math.max(failures - freeAttempts - 1, 0);
+        long delay = baseDelayNanos;
+        for (int step = 0; step < exponent && delay < maxDelayNanos; step++) {
+            delay = delay > (maxDelayNanos >>> 1) ? maxDelayNanos : delay << 1;
+        }
+        return Math.min(delay, maxDelayNanos);
     }
 
     private void enforceBound() {
-        long now = System.nanoTime();
+        long now = nanoClock.getAsLong();
         if (accountAttempts.size() > maxEntries) {
             accountAttempts.values().removeIf(attempt ->
                     now - attempt.lastNanos() > resetAfterNanos);
-            if (accountAttempts.size() > maxEntries) {
-                accountAttempts.clear();
-            }
+            evictOldestUntilUnderBound(accountAttempts, Attempt::lastNanos);
         }
         if (clientAttempts.size() > maxEntries) {
             clientAttempts.values().removeIf(attempt ->
                     now - attempt.firstNanos() > clientWindowNanos);
-            if (clientAttempts.size() > maxEntries) {
-                clientAttempts.clear();
+            evictOldestUntilUnderBound(clientAttempts, Attempt::firstNanos);
+        }
+    }
+
+    private void evictOldestUntilUnderBound(ConcurrentMap<String, Attempt> attempts,
+            ToLongFunction<Attempt> timestamp) {
+        while (attempts.size() > maxEntries) {
+            String oldestKey = null;
+            long oldest = Long.MAX_VALUE;
+            for (Map.Entry<String, Attempt> entry : attempts.entrySet()) {
+                long value = timestamp.applyAsLong(entry.getValue());
+                if (value < oldest) {
+                    oldest = value;
+                    oldestKey = entry.getKey();
+                }
             }
+            if (oldestKey == null) {
+                return;
+            }
+            attempts.remove(oldestKey);
         }
     }
 
