@@ -258,14 +258,18 @@ public class UserService implements IUserService {
             throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
         }
 
+        String temporaryPassword = null;
         if (active) {
-            String temporaryPassword = generateTemporaryPassword();
+            temporaryPassword = generateTemporaryPassword();
             user.setPassword(passwordEncoder.encode(temporaryPassword));
-            sendTemporaryCredentials(user, temporaryPassword);
         }
 
         user.setActive(active);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+
+        if (active) {
+            sendTemporaryCredentials(user, temporaryPassword);
+        }
         return userConverter.userToUserResponseDTO(user);
     }
 
