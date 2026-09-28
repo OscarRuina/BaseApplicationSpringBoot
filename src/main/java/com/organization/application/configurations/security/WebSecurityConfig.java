@@ -1,5 +1,6 @@
 package com.organization.application.configurations.security;
 
+import com.organization.application.configurations.security.filters.JwtAccessDeniedHandler;
 import com.organization.application.configurations.security.filters.JwtEntryPoint;
 import com.organization.application.configurations.security.filters.JwtFilter;
 import org.springframework.context.annotation.Bean;
@@ -26,10 +27,14 @@ public class WebSecurityConfig {
 
     private final JwtEntryPoint jwtEntryPoint;
 
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
     public WebSecurityConfig(JwtFilter jwtFilter,
-            JwtEntryPoint jwtEntryPoint) {
+            JwtEntryPoint jwtEntryPoint,
+            JwtAccessDeniedHandler jwtAccessDeniedHandler) {
         this.jwtFilter = jwtFilter;
         this.jwtEntryPoint = jwtEntryPoint;
+        this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
     }
 
     @Bean
@@ -37,7 +42,9 @@ public class WebSecurityConfig {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .exceptionHandling(handler -> handler.authenticationEntryPoint(jwtEntryPoint))
+                .exceptionHandling(handler -> handler
+                        .authenticationEntryPoint(jwtEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/auth/**", "/v3/**", "/swagger-ui/**").permitAll();
                     auth.anyRequest().authenticated();
