@@ -51,4 +51,21 @@ public class RoleEntity {
     public RoleEntity(@NotNull RoleType type){
          this.type = type;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof RoleEntity)) {
+            return false;
+        }
+        RoleEntity that = (RoleEntity) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

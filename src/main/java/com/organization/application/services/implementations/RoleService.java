@@ -1,5 +1,7 @@
 package com.organization.application.services.implementations;
 
+import com.organization.application.configurations.exceptions.InvalidRoleException;
+import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.models.entities.RoleEntity;
 import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
@@ -19,6 +21,7 @@ public class RoleService implements IRoleService {
 
     @Override
     public RoleEntity findRoleByType(RoleType roleType) {
-        return roleRepository.findByType(roleType).orElse(null);
+        return roleRepository.findByType(roleType).orElseThrow(
+                () -> new InvalidRoleException(ExceptionMessages.ROLE_NOT_EXIST));
     }
 }

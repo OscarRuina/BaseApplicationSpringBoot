@@ -1,17 +1,18 @@
 package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.email.service.IEmailService;
-import com.organization.application.configurations.exceptions.AttributeErrorsException;
-import com.organization.application.configurations.exceptions.AuthenticationException;
-import com.organization.application.configurations.exceptions.MailSendException;
+import com.organization.application.configurations.exceptions.CurrentPasswordInvalidException;
+import com.organization.application.configurations.exceptions.CurrentPasswordRequiredException;
+import com.organization.application.configurations.exceptions.ForbiddenException;
+import com.organization.application.configurations.exceptions.InvalidRoleException;
+import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
+import com.organization.application.configurations.exceptions.UserInactiveException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
-import com.organization.application.configurations.security.jwt.JwtUtil;
-import com.organization.application.configurations.security.service.UserDetailsServiceImpl;
+import com.organization.application.configurations.security.throttle.LoginThrottle;
 import com.organization.application.converters.UserConverter;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
-import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.messages.ExceptionMessages;
 import com.organization.application.models.entities.RoleEntity;
@@ -20,20 +21,16 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.interfaces.IRoleService;
 import com.organization.application.services.interfaces.IUserService;
-import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletRequest;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.CharacterPredicates;
-import org.apache.commons.text.RandomStringGenerator;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BindingResult;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -43,97 +40,105 @@ public class UserService implements IUserService {
 
     private final UserConverter userConverter;
 
-    private final UserDetailsServiceImpl userDetailsService;
-
     private final IRoleService roleService;
-
-    private final JwtUtil jwtUtil;
 
     private final IEmailService emailService;
 
-    private static final  String BEARER_PART = "Bearer ";
+    private final PasswordEncoder passwordEncoder;
 
-    private static final  String EMAIL_SUBJECT = "Registro de Usuario ";
+    private final LoginThrottle loginThrottle;
+
+    private static final String EMAIL_SUBJECT = "Registro de Usuario";
+
+    private static final String TEMPLATE_NEW_USER = "email_new_user";
+
+    private static final char[] PASSWORD_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
+
+    private static final int TEMPORARY_PASSWORD_LENGTH = 16;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public UserService(IUserRepository userRepository, UserConverter userConverter,
-            UserDetailsServiceImpl userDetailsService, IRoleService roleService, JwtUtil jwtUtil,
-            IEmailService emailService) {
+            IRoleService roleService,
+            IEmailService emailService, PasswordEncoder passwordEncoder,
+            LoginThrottle loginThrottle) {
         this.userRepository = userRepository;
         this.userConverter = userConverter;
-        this.userDetailsService = userDetailsService;
         this.roleService = roleService;
-        this.jwtUtil = jwtUtil;
         this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
+        this.loginThrottle = loginThrottle;
     }
 
     /**
      * Método encargado de retornar los datos del usuario autenticado en la aplicación
-     * @param request
-     * @return LoginResponseDTO
+     * @param callerEmail
+     * @return UserResponseDTO
      */
     @Override
-    public LoginResponseDTO me(HttpServletRequest request) {
+    public UserResponseDTO me(String callerEmail) {
         log.info("Inside user service method me ");
 
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        String token = "";
+        UserEntity user = userRepository.findByEmail(callerEmail).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
 
-        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
-            token = authorizationHeader.substring(7);
-
-            return userConverter.userToLoginResponseDTO(userDetailsService.getUser(), token);
-        }
-        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
+        return userConverter.userToUserResponseDTO(user);
     }
 
     /**
      * Método encargado de crear un nuevo usuario en la aplicación
+     * La creación del usuario y el envío del mail ocurren dentro de la misma transacción,
+     * por lo que un fallo en el envío revierte el alta y no queda ningún usuario persistido
      * @param registerUserRequestDTO
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, BindingResult bindingResult) {
+    @Transactional
+    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
         log.info("Inside user service method register");
-        if (bindingResult.hasErrors()){
-            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
-        }
-        if (userRepository.findByEmail(registerUserRequestDTO.getEmail()).isPresent()){
+        if (userRepository.existsByEmail(registerUserRequestDTO.getEmail())){
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
         }else {
-            if (!registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
-                throw new AuthenticationException(ExceptionMessages.ROLE_NOT_VALID);
+            if (registerUserRequestDTO.getRole() != RoleType.USER){
+                throw new InvalidRoleException(ExceptionMessages.ROLE_NOT_VALID);
             }
-            RoleEntity role = roleService.findRoleByType(RoleType.valueOf(registerUserRequestDTO.getRole()));
+            RoleEntity role = roleService.findRoleByType(registerUserRequestDTO.getRole());
             log.info(role.getType().name());
-            if (registerUserRequestDTO.getRole().equalsIgnoreCase(RoleType.USER.name())){
-                RandomStringGenerator generator = new RandomStringGenerator.Builder()
-                        .withinRange('0', 'z')
-                        .filteredBy(CharacterPredicates.DIGITS, CharacterPredicates.LETTERS)
-                        .build();
-                String temporaryPassword = generator.generate(8,12);
-                UserResponseDTO dto =  userConverter.userToUserResponseDTO(
-                        userRepository.save(
-                                UserEntity.builder()
-                                        .firstname(registerUserRequestDTO.getFirstname())
-                                        .lastname(registerUserRequestDTO.getLastname())
-                                        .email(registerUserRequestDTO.getEmail())
-                                        .password(encryptPassword(temporaryPassword))
-                                        .active(true)
-                                        .roleEntities(Set.of(role))
-                                        .build()
-                        )
-                );
-                String[] toUser = {registerUserRequestDTO.getEmail()};
-                Map<String, Object> message = new HashMap<>();
-                message.put("username", registerUserRequestDTO.getEmail());
-                message.put("password", temporaryPassword);
-                CompletableFuture.runAsync(() -> emailService.sendEmail(toUser, EMAIL_SUBJECT, message));
-                return dto;
-            }else {
-                log.error(ExceptionMessages.CANT_CREATE_USER);
-                throw new AuthenticationException(ExceptionMessages.CANT_CREATE_USER);
+
+            String temporaryPassword = generateTemporaryPassword();
+            UserEntity user = UserEntity.builder()
+                    .firstname(registerUserRequestDTO.getFirstname())
+                    .lastname(registerUserRequestDTO.getLastname())
+                    .email(registerUserRequestDTO.getEmail())
+                    .password(passwordEncoder.encode(temporaryPassword))
+                    .active(true)
+                    .roleEntities(Set.of(role))
+                    .build();
+
+            try {
+                user = userRepository.saveAndFlush(user);
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Concurrent registration detected for email {}",
+                        registerUserRequestDTO.getEmail());
+                throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
             }
+
+            String[] toUser = {registerUserRequestDTO.getEmail()};
+            Map<String, Object> message = new HashMap<>();
+            message.put("username", registerUserRequestDTO.getEmail());
+            message.put("password", temporaryPassword);
+            emailService.sendEmail(toUser, EMAIL_SUBJECT, TEMPLATE_NEW_USER, message);
+            return userConverter.userToUserResponseDTO(user);
         }
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder(TEMPORARY_PASSWORD_LENGTH);
+        for (int i = 0; i < TEMPORARY_PASSWORD_LENGTH; i++) {
+            password.append(PASSWORD_ALPHABET[SECURE_RANDOM.nextInt(PASSWORD_ALPHABET.length)]);
+        }
+        return password.toString();
     }
 
     /**
@@ -143,20 +148,19 @@ public class UserService implements IUserService {
     @Override
     public List<UserResponseDTO> findUsers() {
         log.info("Inside user service method find users");
-        return userRepository.findAll().stream()
+        return userRepository.findAllByOrderByIdAsc().stream()
                 .map(userConverter::userToUserResponseDTO)
                 .toList();
     }
 
     /**
      * Método encargado de buscar todos los usuarios que no han sido eliminados de la aplicación
-     * @param active
      * @return List<UserResponseDTO>
      */
     @Override
-    public List<UserResponseDTO> findUsersActive(boolean active) {
+    public List<UserResponseDTO> findActiveUsers() {
         log.info("Inside user service method find active users");
-        return userRepository.findAllByActive(active).stream()
+        return userRepository.findAllByActive(true).stream()
                 .map(userConverter::userToUserResponseDTO)
                 .toList();
     }
@@ -169,148 +173,167 @@ public class UserService implements IUserService {
     @Override
     public UserResponseDTO findUser(Integer id) {
         log.info("Inside user service method find user by id");
-        if (userRepository.findById(id).isEmpty()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else {
-            return userConverter.userToUserResponseDTO(
-                    userRepository.findById(id).get()
-            );
-        }
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+        return userConverter.userToUserResponseDTO(user);
+    }
+
+    private boolean isAdmin(UserEntity user) {
+        return user.getRoleEntities().stream()
+                .anyMatch(roleEntity -> roleEntity.getType() == RoleType.ADMIN);
+    }
+
+    private long countActiveAdmins() {
+        return userRepository.findAllByRoleForUpdate(RoleType.ADMIN).stream()
+                .filter(UserEntity::isActive)
+                .count();
     }
 
     /**
      * Método encargado de eliminar un usuario en la aplicación
      * @param id
-     * @param request
+     * @param callerEmail
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO delete(Integer id, HttpServletRequest request) {
+    public UserResponseDTO delete(Integer id, String callerEmail) {
         log.info("Inside user service method delete user by id");
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        String token = "";
 
-        if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else{
-            if (userRepository.findById(id).get().getRoleEntities().stream().anyMatch(
-                    roleEntity -> roleEntity.getType().name().equalsIgnoreCase(RoleType.ADMIN.name()))){
-                throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
-            }
-            if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
-                token = authorizationHeader.substring(7);
-                String username = jwtUtil.getUsername(token);
-                if (username.equalsIgnoreCase(userRepository.findById(id).get().getEmail())){
-                    throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
-                }else {
-                    UserEntity user = userRepository.findById(id).get();
-                    user.setActive(false);
-                    userRepository.save(user);
-                    return userConverter.userToUserResponseDTO(user);
-                }
-            }
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+
+        if (!user.isActive()){
+            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
-        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
+
+        if (isAdmin(user)){
+            throw new ForbiddenException(ExceptionMessages.CANT_DELETE);
+        }
+
+        if (user.getEmail().equalsIgnoreCase(callerEmail)){
+            throw new ForbiddenException(ExceptionMessages.CANT_DELETE);
+        }
+
+        user.setActive(false);
+        userRepository.save(user);
+        return userConverter.userToUserResponseDTO(user);
     }
 
     /**
      * Método encargado de actualizar el estado de un usuario en la aplicación
      * @param id
-     * @param request
+     * @param active
+     * @param callerEmail
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateStatus(Integer id, HttpServletRequest request) {
-        log.info("Inside user service method update status user by id");
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        String token = "";
+    @Transactional
+    public UserResponseDTO updateStatus(Integer id, boolean active, String callerEmail) {
+        log.info("Inside user service method update status user by id, active: {}", active);
 
-        if (userRepository.findById(id).isEmpty() || userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else{
-            if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
-                token = authorizationHeader.substring(7);
-                String username = jwtUtil.getUsername(token);
-                if (username.equalsIgnoreCase(userRepository.findById(id).get().getEmail())){
-                    throw new AuthenticationException(ExceptionMessages.CANT_DELETE);
-                }else {
-                    UserEntity user = userRepository.findById(id).get();
-                    user.setActive(true);
-                    userRepository.save(user);
-                    return userConverter.userToUserResponseDTO(user);
-                }
-            }
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+
+        if (user.getEmail().equalsIgnoreCase(callerEmail)){
+            throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_STATUS);
         }
-        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
+
+        if (user.isActive() == active){
+            return userConverter.userToUserResponseDTO(user);
+        }
+
+        if (!active && isAdmin(user) && countActiveAdmins() == 1) {
+            throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
+        }
+
+        user.setActive(active);
+        userRepository.save(user);
+        return userConverter.userToUserResponseDTO(user);
     }
 
     /**
      * Método encargado de actualizar el rol de un usuario en la aplicación
      * @param id
      * @param role
+     * @param callerEmail
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateRole(Integer id, String role) {
+    @Transactional
+    public UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail) {
         log.info("Inside user service method update role");
-        if (userRepository.findById(id).isEmpty() || !userRepository.findById(id).get().isActive()){
-            throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
-        }else{
-            if (role.equalsIgnoreCase(RoleType.USER.name()) || role.equalsIgnoreCase(RoleType.ADMIN.name())){
-                UserEntity user = userRepository.findById(id).get();
-                user.getRoleEntities().add(roleService.findRoleByType(RoleType.valueOf(role)));
-                userRepository.save(user);
-                return userConverter.userToUserResponseDTO(user);
-            }else {
-                throw new AuthenticationException(ExceptionMessages.ROLE_NOT_VALID);
-            }
+
+        UserEntity user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+
+        if (!user.isActive()){
+            throw new UserInactiveException(ExceptionMessages.USER_NOT_ACTIVE);
         }
+
+        if (user.getEmail().equalsIgnoreCase(callerEmail)){
+            throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_ROLE);
+        }
+
+        RoleEntity roleEntity = roleService.findRoleByType(role);
+
+        if (isAdmin(user) && roleEntity.getType() != RoleType.ADMIN
+                && countActiveAdmins() == 1) {
+            throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
+        }
+
+        user.getRoleEntities().clear();
+        user.getRoleEntities().add(roleEntity);
+
+        return userConverter.userToUserResponseDTO(userRepository.save(user));
     }
 
     /**
      * Método encargado de actualizar el usuario autenticado en la aplicación
      * @param updateUserRequestDTO
-     * @param request
-     * @param bindingResult
+     * @param callerEmail
+     * @param clientIp
      * @return UserResponseDTO
      */
     @Override
-    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO,
-            BindingResult bindingResult, HttpServletRequest request) {
-        log.info("Inside user service method update user ");
+    public UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail,
+            String clientIp) {
+        String newPassword = updateUserRequestDTO.getPassword();
+        boolean passwordChange = newPassword != null && !newPassword.isBlank();
 
-        if (bindingResult.hasErrors()){
-            throw new AttributeErrorsException(ExceptionMessages.INVALID_ATTRIBUTES);
-        }
-
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        String token = "";
-        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PART)){
-            token = authorizationHeader.substring(7);
-
-            String username = jwtUtil.getUsername(token);
-            if (userRepository.findByEmail(username).isPresent()){
-                UserEntity user = userRepository.findByEmail(username).get();
-                user.setFirstname(updateUserRequestDTO.getFirstname());
-                user.setLastname(updateUserRequestDTO.getLastname());
-                user.setPassword(encryptPassword(updateUserRequestDTO.getPassword()));
-
-                return userConverter.userToUserResponseDTO(userRepository.save(user));
-            }else{
-                throw new UserNotExistException(ExceptionMessages.USER_NOT_EXIST);
+        if (passwordChange) {
+            long retryAfter = loginThrottle.retryAfterSeconds(callerEmail, clientIp);
+            if (retryAfter > 0) {
+                throw new TooManyAttemptsException(ExceptionMessages.TOO_MANY_ATTEMPTS, retryAfter);
             }
-
+            if (updateUserRequestDTO.getCurrentPassword() == null
+                    || updateUserRequestDTO.getCurrentPassword().isBlank()) {
+                throw new CurrentPasswordRequiredException(
+                        ExceptionMessages.CURRENT_PASSWORD_REQUIRED);
+            }
         }
-        throw new AuthenticationException(ExceptionMessages.BAD_CREDENTIALS);
-    }
 
-    /**
-     * Método encargado de encriptar las contraseñas
-     * @param password
-     * @return String
-     */
-    private String encryptPassword(String password) {
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(7);
-        return passwordEncoder.encode(password);
+        UserEntity user = userRepository.findByEmail(callerEmail).orElseThrow(
+                () -> new UserNotExistException(ExceptionMessages.USER_NOT_EXIST));
+
+        if (passwordChange && !passwordEncoder.matches(updateUserRequestDTO.getCurrentPassword(),
+                user.getPassword())) {
+            loginThrottle.recordFailure(callerEmail, clientIp);
+            throw new CurrentPasswordInvalidException(ExceptionMessages.CURRENT_PASSWORD_INVALID);
+        }
+
+        user.setFirstname(updateUserRequestDTO.getFirstname());
+        user.setLastname(updateUserRequestDTO.getLastname());
+
+        if (passwordChange) {
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        UserResponseDTO dto = userConverter.userToUserResponseDTO(userRepository.save(user));
+
+        if (passwordChange) {
+            loginThrottle.recordSuccess(callerEmail);
+        }
+
+        return dto;
     }
 }

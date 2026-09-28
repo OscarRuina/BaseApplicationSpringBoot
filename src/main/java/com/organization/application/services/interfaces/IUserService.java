@@ -2,30 +2,28 @@ package com.organization.application.services.interfaces;
 
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
-import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
-import jakarta.servlet.http.HttpServletRequest;
+import com.organization.application.models.enums.RoleType;
 import java.util.List;
-import org.springframework.validation.BindingResult;
 
 public interface IUserService {
 
-    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, BindingResult bindingResult);
+    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO);
 
-    LoginResponseDTO me(HttpServletRequest request);
+    UserResponseDTO me(String callerEmail);
 
     List<UserResponseDTO> findUsers();
 
-    List<UserResponseDTO> findUsersActive(boolean active);
+    List<UserResponseDTO> findActiveUsers();
 
     UserResponseDTO findUser(Integer id);
 
-    UserResponseDTO delete(Integer id, HttpServletRequest request);
+    UserResponseDTO delete(Integer id, String callerEmail);
 
-    UserResponseDTO updateStatus(Integer id, HttpServletRequest request);
+    UserResponseDTO updateStatus(Integer id, boolean active, String callerEmail);
 
-    UserResponseDTO updateRole(Integer id, String role);
+    UserResponseDTO updateRole(Integer id, RoleType role, String callerEmail);
 
-    UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, BindingResult bindingResult
-            , HttpServletRequest request);
+    UserResponseDTO updateUser(UpdateUserRequestDTO updateUserRequestDTO, String callerEmail,
+            String clientIp);
 }

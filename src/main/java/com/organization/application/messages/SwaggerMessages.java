@@ -24,7 +24,19 @@ public final class SwaggerMessages {
 
     public static final String ERROR_RESPONSE_401 = "Unauthorized";
 
+    public static final String ERROR_RESPONSE_403 = "Forbidden";
+
+    public static final String ERROR_RESPONSE_404 = "Not found";
+
+    public static final String ERROR_RESPONSE_409 = "Conflict";
+
+    public static final String ERROR_RESPONSE_429 = "Too many requests";
+
     public static final String ERROR_RESPONSE_500 = "Internal server error";
+
+    public static final String ERROR_RESPONSE_502 = "Bad gateway";
+
+    public static final String ERROR_RESPONSE_503 = "Service unavailable";
 
     //Security Controller Messages
     public static final String LOGIN_OPERATION = "Login user with username and password and then "
@@ -33,7 +45,7 @@ public final class SwaggerMessages {
     public static final String LOGIN_RESPONSE_200 = "User logged successfully";
 
     //User Controller Messages
-    public static final String USER_ME_OPERATION = "Return the user logged in with his token";
+    public static final String USER_ME_OPERATION = "Return the user logged in";
 
     public static final String USER_ME_RESPONSE_200 = "User logged return successfully";
 
@@ -43,7 +55,7 @@ public final class SwaggerMessages {
 
     public static final String USER_REGISTER_OPERATION = "Return the user created";
 
-    public static final String USER_REGISTER_RESPONSE_200 = "User created successfully";
+    public static final String USER_REGISTER_RESPONSE_201 = "User created successfully";
 
     public static final String USER_ALL_ACTIVE_OPERATION = "Return all the active users";
 
