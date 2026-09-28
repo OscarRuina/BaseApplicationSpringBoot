@@ -17,7 +17,7 @@ export EMAIL="your-bot@example.com"
 export EMAIL_PASSWORD="your-app-password"
 
 # 3. Run it
-mvn spring-boot:run
+SPRING_PROFILES_ACTIVE=dev APP_SEED_PASSWORD=your-dev-password mvn spring-boot:run
 
 # 4. Log in and read your own profile
 curl -s http://localhost:8085/api/auth/login \
