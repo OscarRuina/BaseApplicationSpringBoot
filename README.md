@@ -106,7 +106,7 @@ All routes are under `/api`. Every request except `POST /auth/login` requires an
 | GET | `/users` | `ADMIN` | List all users |
 | GET | `/users/active` | `ADMIN` | List active users |
 | GET | `/users/{id}` | `ADMIN` | Get a user by id |
-| POST | `/users/register` | `ADMIN` | Register a new user, assigning a single role (`ADMIN` or `USER`) |
+| POST | `/users/register` | `ADMIN` | Register a new user with the `USER` role |
 | PUT | `/users/status/{id}` | `ADMIN` | Activate or deactivate a user |
 | PUT | `/users/roles/{id}` | `ADMIN` | Replace the roles assigned to a user |
 | DELETE | `/users/{id}` | `ADMIN` | Delete a user |
