@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.organization.application.configurations.exceptions.MyExceptionHandler;
 import com.organization.application.configurations.security.filters.JwtAccessDeniedHandler;
+import com.organization.application.configurations.security.filters.SecurityErrorWriter;
 import com.organization.application.messages.ExceptionMessages;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,8 @@ class JwtAccessDeniedHandlerTests {
 
     private static final String INTERNAL_DETAIL = "Access is denied";
 
-    private final JwtAccessDeniedHandler handler = new JwtAccessDeniedHandler();
+    private final JwtAccessDeniedHandler handler =
+            new JwtAccessDeniedHandler(new SecurityErrorWriter(new ObjectMapper()));
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

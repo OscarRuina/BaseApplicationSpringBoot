@@ -1,10 +1,8 @@
 package com.organization.application.configurations.security.filters;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.organization.application.configurations.exceptions.InvalidTokenException;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.service.UserPrincipal;
-import com.organization.application.dtos.response.ApplicationResponse;
 import com.organization.application.messages.ResponseMessages;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,7 +13,6 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,9 +34,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final UserDetailsService userDetailsService;
 
-    public JwtFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
+    private final SecurityErrorWriter securityErrorWriter;
+
+    public JwtFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService,
+            SecurityErrorWriter securityErrorWriter) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.securityErrorWriter = securityErrorWriter;
     }
 
     @Override
@@ -67,12 +68,8 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private void writeServiceUnavailable(HttpServletResponse response) throws IOException {
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-
-        ObjectMapper mapper = new ObjectMapper();
-        response.getWriter().write(mapper.writeValueAsString(
-                new ApplicationResponse<>(null, ResponseMessages.ERROR)));
+        securityErrorWriter.writeError(response,
+                HttpServletResponse.SC_SERVICE_UNAVAILABLE, ResponseMessages.ERROR);
     }
 
     private void authenticate(String username, HttpServletRequest request) {
