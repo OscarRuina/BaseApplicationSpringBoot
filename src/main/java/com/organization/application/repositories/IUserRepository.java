@@ -27,7 +27,7 @@ public interface IUserRepository extends JpaRepository<UserEntity, Integer> {
     List<UserEntity> findAllByActive(boolean active);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query(value = "select u from UserEntity u join u.roleEntities r "
+    @Query(value = "select distinct u from UserEntity u join u.roleEntities r "
             + "where r.type = :type order by u.id")
     List<UserEntity> findAllByRoleForUpdate(@Param("type") RoleType type);
 }
