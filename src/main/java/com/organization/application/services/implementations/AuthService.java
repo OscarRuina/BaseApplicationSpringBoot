@@ -58,7 +58,7 @@ public class AuthService implements IAuthService {
             log.error("Authentication infrastructure failure. Username: {}",
                     loginRequestDTO.getUsername(), e);
             throw new AuthenticationServiceUnavailableException(
-                    ExceptionMessages.AUTH_SERVICE_UNAVAILABLE);
+                    ExceptionMessages.AUTH_SERVICE_UNAVAILABLE, e);
         }catch (DisabledException e){
             log.info("Login rejected: account is not active. Username: {}",
                     loginRequestDTO.getUsername());

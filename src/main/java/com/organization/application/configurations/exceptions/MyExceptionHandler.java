@@ -78,11 +78,6 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, e.getMessage());
     }
 
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<Object> handlerInvalidTokenException(InvalidTokenException e) {
-        return build(HttpStatus.UNAUTHORIZED, e.getMessage());
-    }
-
     @ExceptionHandler(UserNotExistException.class)
     public ResponseEntity<Object> handlerUserNotExistException(UserNotExistException e) {
         return build(HttpStatus.NOT_FOUND, e.getMessage());
