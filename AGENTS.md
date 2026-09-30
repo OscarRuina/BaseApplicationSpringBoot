@@ -50,6 +50,8 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 | Reissue needs a dead token | `register` re-mails only when the pending row's token has expired. Re-mailing a live token turns a convenience endpoint into an unauthenticated mail cannon at one inbox, so that case is `409` |
 | Register sends before commit | A mail failure rolls the row back, but the throttle counter is in-memory and does *not* roll back: a broken SMTP both leaves no user and burns the client's hourly budget. `RegisterMailRollbackTests` asserts the 21st attempt gets `429` even though all 20 rolled back — that is the intended interaction, not a bug |
 | Public endpoints stay out of the auth matrix | `UserControllerAuthorizationTests.allEndpoints()` lists only token-guarded routes. `publicEndpoints()` carries `/users/register` and `/users/activate`: with a token they must still reach the service, so listing them as guarded makes the filter's real behaviour (permit) look like a security failure |
+| Throttle budget order | The service calls `retryAfterSeconds` *before* `recordAttempt`, so `maxAttempts` requests pass and the next is blocked. A test that records N times and then checks has already simulated request N+1 and will fail against a correct throttle. `Retry-After` is the remaining window **rounded up** in whole seconds, so a full window reports 3599, not 3600 — assert a range, never the exact value |
+| Bulk purge has no test on purpose | `enforceBound` purges expired entries with `removeIf` before evicting oldest-first. Those always select the same entries (expired == lowest `startedNanos`), so removing the purge keeps the suite green and only changes cost from O(n) to O(n^2). Verified by mutation; not a coverage gap. `RegistrationThrottleTests` says so at the bottom |
 | Error envelope | `ApplicationResponse` uses `@JsonInclude(NON_NULL)`: errors are `{"message": ...}` with no `data` field |
 | Schema authority | Flyway owns the schema, `ddl-auto=validate` only verifies it. Add a new `V<n>__*.sql` in `src/main/resources/db/migration`; never edit one that has been applied |
 | Migrations vs suite | The suite runs H2 with `spring.flyway.enabled=false`, so a migration that breaks MySQL stays green. Verify against real MySQL 8.0 before merging |
@@ -59,7 +61,7 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 
 ## Endpoints (overview)
 
-Context path `/api`; every route except `POST /auth/login` requires a JWT.
+Context path `/api`; every route requires a JWT except the public ones: `POST /auth/login` and, since `b6dae80`, `POST /users/register` and `POST /users/activate`.
 
 | Area | Routes | Role |
 |------|--------|------|
@@ -72,4 +74,7 @@ Full endpoint table, response contract and parameter details: [`README.md`](READ
 
 ## Backlog
 
-- Forgot/reset password flow (mail temporary credentials) — not implemented; now the *only* missing piece, because reactivation deliberately stopped rotating passwords. Pattern to follow: the register/reactivation email flow.
+- Forgot/reset password flow (mail temporary credentials) — not implemented. Pattern to follow: the register/reactivation email flow. Reactivation deliberately stopped rotating passwords, so a forgotten password has no way back today; only an admin can reactivate an account whose password is lost.
+- Email enumeration on `POST /users/register` — a duplicate email answers `409` **without** spending throttle budget, so the endpoint cannot distinguish "in use" from "free" at a bounded rate. Deliberate: charging the `409` would lock out anyone who mistypes their address. Rate-limit this path at the proxy if enumeration matters to you.
+- Throttle behind a reverse proxy — `RegistrationThrottle` keys on `getRemoteAddr()`, which is the proxy, not the client. Behind a proxy the 20/hour budget becomes one global budget for every user, so a signup burst from a single NAT egress can block legitimate registrations. Same caveat as `LoginThrottle`, and it needs a trusted-forwarded-for header to fix — not solvable inside this repo.
+- `updateRole` replaces rather than adds — promoting a `USER` to `ADMIN` drops any other role it had. It matches the endpoint's documented contract ("Replace the roles assigned to a user"), so it is not a bug, but confirm it is intended before relying on multi-role users.

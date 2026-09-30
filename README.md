@@ -151,11 +151,11 @@ To change the schema, add a new `V3__...`, `V4__...` file. Never edit a migratio
 - **The test suite does not run migrations.** It runs on H2 with `spring.flyway.enabled=false`, because the migrations are MySQL-only SQL. A migration that breaks MySQL can therefore leave the suite green — verify against a real MySQL before merging.
 - **`flyway-mysql` is required next to `flyway-core`.** `flyway-core` carries no MySQL support; without that module the app fails at startup with `Unsupported Database: MySQL`. Both versions come from the Spring Boot BOM (Flyway 9.16.3 on Boot 3.1.5), so neither declares a version.
 - **`active_user` alone cannot tell pending from suspended.** `active_user` is still the only login gate, and `activated_at_user` is what says *why* a user is inactive: `NULL` means a registration nobody confirmed, `NOT NULL` with `active_user = 0` means an administrator suspended somebody who had logged in before. `UserEntity.isPendingActivation()` is the single place that distinction is read, and the API exposes it as `activatedAt`. The backfill in `V3` is deliberately unconditional — every row that predates public registration is as confirmed as it will ever be, including the suspended ones.
-- **`activation_token_user` stores a SHA-256, never the token.** A database dump cannot be replayed against the activation endpoint. The token is destroyed on use, and the `UNIQUE` constraint is what guarantees the lookup returns at most one user.
+- **`activation_token_user` stores a SHA-256, never the token.** A database dump cannot be replayed against the activation endpoint, and the `UNIQUE` constraint is what guarantees the lookup returns at most one user. The hash **is kept after a successful activation** so the endpoint can answer `409` for a token that was already used instead of pretending it never existed; the single-use guarantee comes from `activatedAt`, not from deleting the hash.
 
 ## Endpoints
 
-All routes are under `/api`. Every request except `POST /auth/login` requires an `Authorization: Bearer <token>` header.
+All routes are under `/api`. Every request requires an `Authorization: Bearer <token>` header except the public ones: `POST /auth/login`, `POST /users/register` and `POST /users/activate`.
 
 | Method | Path | Role | Action |
 |--------|------|------|--------|

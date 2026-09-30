@@ -7,7 +7,6 @@ import com.organization.application.configurations.exceptions.CurrentPasswordReq
 import com.organization.application.configurations.exceptions.ExpiredActivationTokenException;
 import com.organization.application.configurations.exceptions.ForbiddenException;
 import com.organization.application.configurations.exceptions.InvalidActivationTokenException;
-import com.organization.application.configurations.exceptions.InvalidRoleException;
 import com.organization.application.configurations.exceptions.PendingActivationException;
 import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
