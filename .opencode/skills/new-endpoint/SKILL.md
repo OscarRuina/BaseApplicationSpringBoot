@@ -118,8 +118,8 @@ public ResponseEntity<ApplicationResponse<UserResponseDTO>> me(
 ```
 
 Shared response descriptions come from the common block of `SwaggerMessages`
-(`ERROR_RESPONSE_400`, `_401`, `_403`, `_404`, `_409`, `_429`, `_500`, `_502`,
-`_503`). Reuse them; only add a per-endpoint constant for the success code.
+(`ERROR_RESPONSE_400`, `_401`, `_403`, `_404`, `_409`, `_410`, `_429`, `_500`,
+`_502`, `_503`). Reuse them; only add a per-endpoint constant for the success code.
 
 `POST` returns `201` with a `Location` header, as `register` does:
 
@@ -216,6 +216,8 @@ public ResponseEntity<Object> handlerXxxNotExist(XxxNotExistException e) {
 | `UserNotExistException` | 404 |
 | `UserAlreadyExistException` | 409 |
 | `UserInactiveException` | 409 |
+| `PendingActivationException` | 409 |
+| `ExpiredActivationTokenException` | **410**, the only `HttpStatus.GONE` here |
 | `MailSendException` | 502 |
 | `TooManyAttemptsException` | 429 **+ `Retry-After` header** |
 | `AccessDeniedException` | 403 |
@@ -267,9 +269,11 @@ Everything in section 3, plus:
   new field is joined there too.
 - **Mail** — a new Thymeleaf template plus `emailService.sendEmail(to[], subject,
   template, vars)`, sent **inside** the transaction following `UserService.register`.
-- **No migrations.** `spring.jpa.hibernate.ddl-auto=update` and no
-  Flyway/Liquibase, so the schema change lands in production silently. Say so in
-  the return manifest.
+- **Schema — Flyway owns it, `ddl-auto=validate` only verifies it.** A new column
+  needs a new `V<n>__*.sql` in `src/main/resources/db/migration`; never edit a
+  migration that has been applied. `validate` is what forces the entity and the
+  migration to ship in the same commit, so a forgotten migration fails the boot
+  instead of a missing column at runtime.
 - **Seeder** — if dev environments need a row, extend the `@Profile("dev")`
   seeder with the same `if (count() == 0)` guard.
 

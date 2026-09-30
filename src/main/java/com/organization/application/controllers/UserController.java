@@ -1,6 +1,7 @@
 package com.organization.application.controllers;
 
 import com.organization.application.configurations.security.service.UserPrincipal;
+import com.organization.application.dtos.request.ActivateAccountRequestDTO;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateStatusRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
@@ -97,16 +98,16 @@ public class UserController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = SwaggerMessages.USER_REGISTER_RESPONSE_201),
             @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
-            @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
-            @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "409", description = SwaggerMessages.ERROR_RESPONSE_409),
+            @ApiResponse(responseCode = "429", description = SwaggerMessages.ERROR_RESPONSE_429),
             @ApiResponse(responseCode = "502", description = SwaggerMessages.ERROR_RESPONSE_502),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO){
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> register(
+            @Valid @RequestBody RegisterUserRequestDTO registerUserRequestDTO,
+            HttpServletRequest request){
         log.info("POST:api/users/register");
-        UserResponseDTO dto =  userService.register(registerUserRequestDTO);
+        UserResponseDTO dto = userService.register(registerUserRequestDTO, clientIpOf(request));
         log.info(ResponseMessages.REGISTER_SUCCESSFUL);
         return ResponseEntity.created(
                         ServletUriComponentsBuilder.fromCurrentContextPath()
@@ -114,6 +115,40 @@ public class UserController {
                                 .buildAndExpand(dto.getId())
                                 .toUri())
                 .body(new ApplicationResponse<>(dto,ResponseMessages.REGISTER_SUCCESSFUL));
+    }
+
+    @PostMapping(value = "/activate", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = SwaggerMessages.USER_ACTIVATE_OPERATION)
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ActivateAccountRequestDTO.class)
+            )
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = SwaggerMessages.USER_ACTIVATE_RESPONSE_200),
+            @ApiResponse(responseCode = "400", description = SwaggerMessages.ERROR_RESPONSE_400),
+            @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
+            @ApiResponse(responseCode = "409", description = SwaggerMessages.ERROR_RESPONSE_409),
+            @ApiResponse(responseCode = "410", description = SwaggerMessages.ERROR_RESPONSE_410),
+            @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
+    })
+    public ResponseEntity<ApplicationResponse<UserResponseDTO>> activate(
+            @Valid @RequestBody ActivateAccountRequestDTO activateAccountRequestDTO){
+        log.info("POST:api/users/activate");
+        UserResponseDTO dto = userService.activate(activateAccountRequestDTO);
+        log.info(ResponseMessages.ACTIVATE_SUCCESSFUL);
+        return ResponseEntity.ok(new ApplicationResponse<>(dto,ResponseMessages.ACTIVATE_SUCCESSFUL));
+    }
+
+    /**
+     * Mismo origen que usa el login throttle: detrás de un proxy esto ve al proxy, y eso está
+     * documentado en {@code RegistrationThrottle}.
+     */
+    private String clientIpOf(HttpServletRequest request) {
+        return request.getRemoteAddr();
     }
 
     @GetMapping(value = "/active",produces = MediaType.APPLICATION_JSON_VALUE)
@@ -183,6 +218,7 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = SwaggerMessages.ERROR_RESPONSE_401),
             @ApiResponse(responseCode = "403", description = SwaggerMessages.ERROR_RESPONSE_403),
             @ApiResponse(responseCode = "404", description = SwaggerMessages.ERROR_RESPONSE_404),
+            @ApiResponse(responseCode = "409", description = SwaggerMessages.ERROR_RESPONSE_409),
             @ApiResponse(responseCode = "500", description = SwaggerMessages.ERROR_RESPONSE_500)
     })
     @PreAuthorize("hasRole('ADMIN')")

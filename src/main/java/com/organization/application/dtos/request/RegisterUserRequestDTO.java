@@ -1,13 +1,16 @@
 package com.organization.application.dtos.request;
 
-import com.organization.application.models.enums.RoleType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * Registro público. No lleva contraseña ni rol a propósito: la contraseña la elige el usuario
+ * en el paso de activación y el rol es siempre USER, así que aceptarlos acá abriría la puerta
+ * a que cualquiera se auto-asigne ADMIN.
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -22,7 +25,4 @@ public class RegisterUserRequestDTO {
     @Email
     @NotBlank
     private String email;
-
-    @NotNull
-    private RoleType role;
 }
