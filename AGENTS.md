@@ -42,6 +42,9 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 | `register` role | Accepts only `USER` (`InvalidRoleException` otherwise) |
 | Login throttling | In-memory per instance; behind a reverse proxy `getRemoteAddr()` sees the proxy, not the client (see `LoginThrottle` javadoc) |
 | Error envelope | `ApplicationResponse` uses `@JsonInclude(NON_NULL)`: errors are `{"message": ...}` with no `data` field |
+| Schema authority | Flyway owns the schema, `ddl-auto=validate` only verifies it. Add a new `V<n>__*.sql` in `src/main/resources/db/migration`; never edit one that has been applied |
+| Migrations vs suite | The suite runs H2 with `spring.flyway.enabled=false`, so a migration that breaks MySQL stays green. Verify against real MySQL 8.0 before merging |
+| Roles come from `V2` | `RoleService.findRoleByType` throws when the row is missing, so an empty `roles` table breaks registration. The `dev` seeder's `loadRoles()` is only a test-suite safety net |
 
 ## Endpoints (overview)
 
