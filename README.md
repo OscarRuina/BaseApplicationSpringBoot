@@ -64,6 +64,9 @@ Base URL: `http://localhost:8085/api` (port 8085, context path `/api`).
 | `MAIL_TEMPLATE_CACHE` | `true` | Cache email templates |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed cross-origin origins |
 | `FRONTEND_BASE_URL` | `http://localhost:3000` | Frontend URL used to build links in emails |
+| `BOOTSTRAP_ADMIN_ENABLED` | `false` | Enable the first-admin initializer |
+| `BOOTSTRAP_ADMIN_EMAIL` | _(empty)_ | Email of the admin to create |
+| `BOOTSTRAP_ADMIN_PASSWORD` | _(empty)_ | Password of that admin, 12-72 printable ASCII characters |
 
 ### Login throttle
 
@@ -93,6 +96,31 @@ The `dev` profile enables SQL logging and Security debug logging, disables mail 
 | `user@hotmail.com` | `USER` |
 
 The seeder is `@Profile("dev")`; it does not run in production. The roles themselves come from migration `V2`, not from the seeder — see [Database migrations](#database-migrations).
+
+## First admin in a fresh environment
+
+The dev seeder does not run in production, so a brand-new production database has nobody who can log in. `BootstrapAdminInitializer` covers that one case: opt in with three variables and it creates the first `ADMIN` on startup.
+
+```bash
+BOOTSTRAP_ADMIN_ENABLED=true \
+BOOTSTRAP_ADMIN_EMAIL=root@yourdomain.com \
+BOOTSTRAP_ADMIN_PASSWORD='choose-a-strong-one' \
+java -jar target/application.jar
+```
+
+It runs only when all three conditions hold:
+
+| Condition | Behaviour when it does not hold |
+|-----------|--------------------------------|
+| `BOOTSTRAP_ADMIN_ENABLED=true` | The bean does not even exist, nothing is logged |
+| No user holds the `ADMIN` role | Logs a WARN and skips, so redeploys are safe |
+| The email is not already taken | Logs a WARN and skips. An existing account is **never** promoted |
+
+The password must satisfy the same policy as `PUT /users`: 12 to 72 printable ASCII characters (72 is the BCrypt limit). A malformed email or a password outside that policy fails the startup instead of creating a weak account.
+
+What this component is not: it is not a way to activate somebody else's registration, and it is not a temporary-password flow. The credential is chosen by the operator before the account exists and stays valid until someone changes it through `PUT /users`. **Remove the three variables once the environment is provisioned.** Leaving them set is harmless — the second boot skips — but the password sits in the environment or your secret store longer than it needs to.
+
+The initializer runs as the last `CommandLineRunner`, after the dev seeder. That ordering matters: the seeder only creates its two accounts when the users table is empty, so a bootstrap running first would leave the dev profile without its regular user.
 
 ## Database migrations
 

@@ -8,7 +8,7 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 |------|---------|
 | Full suite (Docker) | `docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app -u $(id -u):$(id -g) maven:3.9-eclipse-temurin-17 mvn -Duser.home=/tmp -B test` |
 | Full suite (local) | `./mvnw test` |
-| Run locally | `./mvnw spring-boot:run` (env vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `TOKEN_SECRET_KEY`, `EMAIL`, `EMAIL_PASSWORD`; optional `MAIL_*`, `APP_SEED_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`) |
+| Run locally | `./mvnw spring-boot:run` (env vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `TOKEN_SECRET_KEY`, `EMAIL`, `EMAIL_PASSWORD`; optional `MAIL_*`, `APP_SEED_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, `BOOTSTRAP_ADMIN_*`) |
 | Dev seeding | `@Profile("dev")` seeder: seeds `admin@gmail.com` (`ADMIN`) and `user@hotmail.com` (`USER`) with `APP_SEED_PASSWORD` when the DB is empty |
 
 ## Where things live
@@ -45,6 +45,8 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 | Schema authority | Flyway owns the schema, `ddl-auto=validate` only verifies it. Add a new `V<n>__*.sql` in `src/main/resources/db/migration`; never edit one that has been applied |
 | Migrations vs suite | The suite runs H2 with `spring.flyway.enabled=false`, so a migration that breaks MySQL stays green. Verify against real MySQL 8.0 before merging |
 | Roles come from `V2` | `RoleService.findRoleByType` throws when the row is missing, so an empty `roles` table breaks registration. The `dev` seeder's `loadRoles()` is only a test-suite safety net |
+| First admin in production | `BootstrapAdminInitializer` is the only supported way to create an admin outside `dev`. Opt-in via `BOOTSTRAP_ADMIN_*`, runs last (seeder is `@Order(0)`), never promotes an existing account, and fails the boot on a weak password. The password policy is duplicated from `UpdateUserRequestDTO` on purpose — `save()` runs no bean validation — so change both together |
+| Bootstrap vs H2 suite | Its repository queries and insert only run against MySQL in production; `ApplicationContextRunner` covers the condition and ordering, not the SQL. `/tmp/opencode/verify-bootstrap.sh` checks the four real-MySQL scenarios |
 
 ## Endpoints (overview)
 

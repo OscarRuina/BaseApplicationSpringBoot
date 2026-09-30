@@ -9,11 +9,18 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Corre antes que {@link BootstrapAdminInitializer} a propósito: este seeder solo crea sus dos
+ * cuentas cuando la tabla de usuarios está vacía, así que si el bootstrap admin corriera
+ * primero el perfil dev se quedaría sin su usuario normal.
+ */
 @Component
 @Profile("dev")
+@Order(0)
 public class UsersSeeder implements CommandLineRunner {
 
     private final IUserRepository userRepository;

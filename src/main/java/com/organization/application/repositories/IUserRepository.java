@@ -20,6 +20,8 @@ public interface IUserRepository extends JpaRepository<UserEntity, Integer> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByRoleEntitiesType(RoleType type);
+
     @EntityGraph(attributePaths = "roleEntities")
     List<UserEntity> findAllByOrderByIdAsc();
 
