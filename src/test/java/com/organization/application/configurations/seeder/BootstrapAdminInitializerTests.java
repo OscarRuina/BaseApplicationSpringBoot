@@ -1,6 +1,7 @@
 package com.organization.application.configurations.seeder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,6 +100,8 @@ class BootstrapAdminInitializerTests {
             assertEquals(1, admin.getRoleEntities().size(), "the bootstrap account is an admin only");
             assertEquals(RoleType.ADMIN, admin.getRoleEntities().iterator().next().getType(),
                     "the single role has to be ADMIN");
+            assertFalse(admin.isPendingActivation(),
+                    "the operator picks the password up front, so the account was never pending");
         }
 
         @Test

@@ -3,11 +3,13 @@ package com.organization.application;
 import com.organization.application.configurations.email.service.IEmailService;
 import com.organization.application.configurations.security.jwt.JwtUtil;
 import com.organization.application.configurations.security.throttle.LoginThrottle;
+import com.organization.application.configurations.security.throttle.RegistrationThrottle;
 import com.organization.application.models.entities.RoleEntity;
 import com.organization.application.models.entities.UserEntity;
 import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
+import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,6 +54,9 @@ public abstract class AbstractSecuredIntegrationTest extends AbstractIntegration
     @MockBean
     protected LoginThrottle loginThrottle;
 
+    @Autowired
+    protected RegistrationThrottle registrationThrottle;
+
     protected UserEntity admin;
 
     protected UserEntity regularUser;
@@ -62,6 +67,9 @@ public abstract class AbstractSecuredIntegrationTest extends AbstractIntegration
     void seedDatabase() {
         userRepository.deleteAll();
         seedRoles();
+        // El throttle de registro vive en memoria del proceso, así que sobrevive al borrado de
+        // la base. Sin este clear un test que agota el presupuesto deja a los demás en 429.
+        registrationThrottle.clear();
 
         admin = persist(ADMIN_EMAIL, true, RoleType.ADMIN);
         regularUser = persist(USER_EMAIL, true, RoleType.USER);
@@ -85,6 +93,7 @@ public abstract class AbstractSecuredIntegrationTest extends AbstractIntegration
                 .email(email)
                 .password(passwordEncoder.encode(PASSWORD))
                 .active(active)
+                .activatedAt(new Timestamp(System.currentTimeMillis()))
                 .roleEntities(roles)
                 .build());
     }

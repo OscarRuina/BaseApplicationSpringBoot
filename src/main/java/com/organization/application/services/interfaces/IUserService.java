@@ -1,5 +1,6 @@
 package com.organization.application.services.interfaces;
 
+import com.organization.application.dtos.request.ActivateAccountRequestDTO;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
@@ -8,7 +9,9 @@ import java.util.List;
 
 public interface IUserService {
 
-    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO);
+    UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, String clientIp);
+
+    UserResponseDTO activate(ActivateAccountRequestDTO activateAccountRequestDTO);
 
     UserResponseDTO me(String callerEmail);
 

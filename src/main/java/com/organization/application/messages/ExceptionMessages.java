@@ -6,6 +6,9 @@ public final class ExceptionMessages {
 
     public static final String USER_NOT_ACTIVE = "ERROR User is not active";
 
+    public static final String USER_PENDING_ACTIVATION =
+            "ERROR The account is pending activation and cannot change status";
+
     public static final String BAD_CREDENTIALS  = "ERROR Bad Credentials";
 
     public static final String AUTH_SERVICE_UNAVAILABLE = "ERROR Authentication service temporarily unavailable";
@@ -24,6 +27,13 @@ public final class ExceptionMessages {
     public static final String ROLE_NOT_VALID = "ERROR Role Not Valid";
 
     public static final String ROLE_NOT_EXIST = "ERROR Role Not Exist";
+
+    public static final String INVALID_ACTIVATION_TOKEN = "ERROR Invalid activation token";
+
+    public static final String ACTIVATION_TOKEN_ALREADY_USED =
+            "ERROR The activation link was already used";
+
+    public static final String ACTIVATION_TOKEN_EXPIRED = "ERROR The activation link has expired";
 
     public static final String CANT_DELETE = "ERROR Cant Delete";
 

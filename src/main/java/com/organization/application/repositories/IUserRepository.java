@@ -18,6 +18,13 @@ public interface IUserRepository extends JpaRepository<UserEntity, Integer> {
     @EntityGraph(attributePaths = "roleEntities")
     Optional<UserEntity> findByEmail(String email);
 
+    /**
+     * Busca por el SHA-256 del token, nunca por el token en claro. La columna es UNIQUE, así
+     * que el Optional ya es single-row sin necesidad de un {@code distinct}.
+     */
+    @EntityGraph(attributePaths = "roleEntities")
+    Optional<UserEntity> findByActivationToken(String activationTokenHash);
+
     boolean existsByEmail(String email);
 
     boolean existsByRoleEntitiesType(RoleType type);

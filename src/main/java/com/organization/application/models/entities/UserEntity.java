@@ -59,6 +59,25 @@ public class UserEntity {
     @Column(name = "active_user", nullable = false)
     private boolean active;
 
+    /**
+     * SHA-256 en hexadecimal del token enviado por mail, nunca el token en claro.
+     * No se destruye al activarse la cuenta: se conserva para poder distinguir
+     * "token ya usado" (409) de "token desconocido" (400). La garantía de un solo uso
+     * viene de {@link #isPendingActivation()} (activado_at_user deja de ser null).
+     */
+    @Column(name = "activation_token_user", length = 64, unique = true)
+    private String activationToken;
+
+    @Column(name = "activation_expires_at_user")
+    private Timestamp activationExpiresAt;
+
+    /**
+     * Cuándo confirmó el usuario su registro por primera vez. Es lo que distingue una cuenta
+     * pendiente de una suspendida por un administrador; ver {@link #isPendingActivation()}.
+     */
+    @Column(name = "activated_at_user")
+    private Timestamp activatedAt;
+
     @Column(name = "create_at_user")
     @CreationTimestamp
     private Timestamp createAt;
@@ -75,4 +94,15 @@ public class UserEntity {
             inverseJoinColumns = @JoinColumn(name = "id_role")
     )
     private Set<RoleEntity> roleEntities;
+
+    /**
+     * Una sola fuente para distinguir "registro sin confirmar" de "cuenta suspendida". Todo
+     * activo tiene {@code activatedAt} puesto, así que {@code null} significa exactamente una
+     * cosa: creado por el registro público y todavía sin confirmar.
+     *
+     * @return true si la cuenta nunca fue confirmada
+     */
+    public boolean isPendingActivation() {
+        return activatedAt == null;
+    }
 }

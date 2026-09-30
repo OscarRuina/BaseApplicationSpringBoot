@@ -16,6 +16,7 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.implementations.UserService;
+import java.sql.Timestamp;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -77,14 +78,15 @@ class ReactivateMailRollbackTests extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("A successful mail delivery reactivates the user and rotates the password")
+    @DisplayName("A successful mail delivery reactivates the user without rotating the password")
     void successfulDeliveryReactivatesUser() {
         userService.updateStatus(target.getId(), true, ADMIN_EMAIL);
 
         UserEntity reloaded = userRepository.findById(target.getId()).orElseThrow();
         assertTrue(reloaded.isActive(), "the user must be active after a successful delivery");
-        assertFalse(passwordEncoder.matches("original-password", reloaded.getPassword()),
-                "the password must be rotated on reactivation");
+        assertTrue(passwordEncoder.matches("original-password", reloaded.getPassword()),
+                "reactivation must keep the password the user chose, otherwise the notification "
+                        + "tells them to use a password that never existed");
     }
 
     private UserEntity saveInactiveUser(String email) {
@@ -95,6 +97,9 @@ class ReactivateMailRollbackTests extends AbstractIntegrationTest {
                 .email(email)
                 .password(passwordEncoder.encode("original-password"))
                 .active(false)
+                // Suspendida, no pendiente: sin activatedAt el guard de pendientes la rechazaría
+                // y el test probaría el rechazo en vez del rollback del mail.
+                .activatedAt(new Timestamp(System.currentTimeMillis()))
                 .roleEntities(Set.of(role))
                 .build());
     }

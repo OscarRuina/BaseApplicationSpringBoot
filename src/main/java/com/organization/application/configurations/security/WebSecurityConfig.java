@@ -47,6 +47,9 @@ public class WebSecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/auth/**", "/v3/**", "/swagger-ui/**").permitAll();
+                    // Estas dos mutan estado de autenticación, por eso viven bajo /users y no
+                    // bajo el permitAll de /auth/**, que es indiscriminado por diseño.
+                    auth.requestMatchers("/users/register", "/users/activate").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(

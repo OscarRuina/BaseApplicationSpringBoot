@@ -132,6 +132,7 @@ Migrations live in `src/main/resources/db/migration`, named `V<n>__<description>
 |-----------|--------------|
 | `V1__create_schema.sql` | Creates `users`, `roles`, `users_roles` |
 | `V2__seed_roles.sql` | Inserts the `USER` and `ADMIN` roles |
+| `V3__add_activation_state.sql` | Adds the activation columns and backfills `activated_at` |
 
 Two starting points, both handled by the same configuration:
 
@@ -149,6 +150,8 @@ To change the schema, add a new `V3__...`, `V4__...` file. Never edit a migratio
 - **`V1` is generated, not typed by hand.** Hibernate maps `boolean` to `bit(1)` on MySQL, and a hand-written guess that disagrees with the entity mapping makes `validate` fail at startup. After changing an entity, regenerate it with `ddl-auto=none` and `jakarta.persistence.schema-generation.scripts.action=create` on `MySQLDialect` rather than editing the file.
 - **The test suite does not run migrations.** It runs on H2 with `spring.flyway.enabled=false`, because the migrations are MySQL-only SQL. A migration that breaks MySQL can therefore leave the suite green — verify against a real MySQL before merging.
 - **`flyway-mysql` is required next to `flyway-core`.** `flyway-core` carries no MySQL support; without that module the app fails at startup with `Unsupported Database: MySQL`. Both versions come from the Spring Boot BOM (Flyway 9.16.3 on Boot 3.1.5), so neither declares a version.
+- **`active_user` alone cannot tell pending from suspended.** `active_user` is still the only login gate, and `activated_at_user` is what says *why* a user is inactive: `NULL` means a registration nobody confirmed, `NOT NULL` with `active_user = 0` means an administrator suspended somebody who had logged in before. `UserEntity.isPendingActivation()` is the single place that distinction is read, and the API exposes it as `activatedAt`. The backfill in `V3` is deliberately unconditional — every row that predates public registration is as confirmed as it will ever be, including the suspended ones.
+- **`activation_token_user` stores a SHA-256, never the token.** A database dump cannot be replayed against the activation endpoint. The token is destroyed on use, and the `UNIQUE` constraint is what guarantees the lookup returns at most one user.
 
 ## Endpoints
 
@@ -162,8 +165,9 @@ All routes are under `/api`. Every request except `POST /auth/login` requires an
 | GET | `/users` | `ADMIN` | List all users |
 | GET | `/users/active` | `ADMIN` | List active users |
 | GET | `/users/{id}` | `ADMIN` | Get a user by id |
-| POST | `/users/register` | `ADMIN` | Register a new user with the `USER` role |
-| PUT | `/users/status/{id}` | `ADMIN` | Activate or deactivate a user — reactivation rotates the password and emails a new temporary one |
+| POST | `/users/register` | public | Create a pending account and mail the activation link |
+| POST | `/users/activate` | public | Redeem the emailed token and choose the password |
+| PUT | `/users/status/{id}` | `ADMIN` | Activate or deactivate a user — reactivation notifies by mail and keeps the current password |
 | PUT | `/users/roles/{id}` | `ADMIN` | Replace the roles assigned to a user |
 | DELETE | `/users/{id}` | `ADMIN` | Delete a user |
 
@@ -184,6 +188,11 @@ Example error body:
 
 - **JWT** tokens expire after **1 hour** (`jwt.token.expiration=3600000`).
 - **Login throttling** limits brute force: after `free-attempts` failures on an account, backoff grows exponentially from `base-delay` up to `max-delay`; the client IP has its own higher threshold with an independent window. Counters live in memory. Read the `LoginThrottle` class javadoc before deploying behind a reverse proxy or running more than one instance — `getRemoteAddr()` sees the proxy, not the client, and in-memory state is per instance.
+- **Suspension is not password reset.** `PUT /users/status/{id}` only flips `active_user` and mails a plain notification on reactivation. It never rotates the password, because an account that gets a mail saying "your account is active, log in with your usual password" while its password was silently replaced is a lockout, not a recovery. `active_user` still blocks the login, so a suspended user cannot get in until an administrator reactivates them.
+- **A pending registration cannot be suspended.** A user whose `activatedAt` is null is waiting on the activation mail, not serving a suspension, so `PUT /users/status/{id}` answers `409` in both directions. Reactivating one would hand an account to somebody who never proved they own the address, and "suspending" an already inactive account would otherwise return a `200` that changes nothing.
+- **Public registration is create-pending, not create-active.** `POST /users/register` takes `{"firstname", "lastname", "email"}` and nothing else: the role is fixed to `USER` server-side and the password is not accepted, because a field an endpoint honours is a field a caller controls. The row is written with `active = false` and `activatedAt = null`, and its `password` column holds a random value the user never receives — the column is `NOT NULL`, and an empty string would be a guessable password sitting in the table. The account cannot log in until `POST /users/activate` redeems the emailed link.
+- **The activation token is single-use and its life has an end.** The mail carries a 64-hex-char token; the database stores only its SHA-256. The hash stays after a successful activation so the endpoint can tell *used* (`409`) from *never existed* (`400`) instead of collapsing both into "bad link", and the single-use guarantee comes from `activatedAt == null` — not from deleting the token. Redemption order is **used → expired → valid**, so a burned token reports `409` even after its window closed. A token is valid for `ACTIVATION_TTL` (7 days); an expired token on an *unconfirmed* account is rotated and re-mailed by a new `POST /users/register` with the same address, because otherwise the owner has no way back in. A live token is not re-mailed, which keeps the endpoint from being a mail cannon at somebody's inbox.
+- **Registration throttling** is separate from login throttling: 20 mail-sending registrations per hour per IP, `429` plus a `Retry-After` header in whole seconds. A `409` duplicate email does not spend budget, so a user who mistypes their address is not locked out — but that also means email enumeration is bounded by your own edge, not by this counter, so rate-limit at the proxy if that matters to you. Both throttles are in-memory and keyed on `getRemoteAddr()`; read the class javadoc before deploying behind a reverse proxy or running more than one instance.
 
 ## Testing
 

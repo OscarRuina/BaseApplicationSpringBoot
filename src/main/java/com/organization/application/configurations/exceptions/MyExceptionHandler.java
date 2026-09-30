@@ -43,7 +43,7 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(TooManyAttemptsException.class)
     public ResponseEntity<Object> handlerTooManyAttempts(TooManyAttemptsException e) {
-        log.warn("Login throttled. Retry after {}s", e.getRetryAfterSeconds());
+        log.warn("Throttled request. Retry after {}s", e.getRetryAfterSeconds());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
                 .body(new ApplicationResponse<>(null, e.getMessage()));
@@ -78,6 +78,11 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    @ExceptionHandler(PendingActivationException.class)
+    public ResponseEntity<Object> handlerPendingActivationException(PendingActivationException e) {
+        return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
     @ExceptionHandler(UserNotExistException.class)
     public ResponseEntity<Object> handlerUserNotExistException(UserNotExistException e) {
         return build(HttpStatus.NOT_FOUND, e.getMessage());
@@ -86,6 +91,24 @@ public class MyExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(UserAlreadyExistException.class)
     public ResponseEntity<Object> handlerUserAlreadyExistException(UserAlreadyExistException e) {
         return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidActivationTokenException.class)
+    public ResponseEntity<Object> handlerInvalidActivationToken(InvalidActivationTokenException e) {
+        log.warn("Activation rejected: {}", e.getMessage());
+        return build(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(ActivationTokenAlreadyUsedException.class)
+    public ResponseEntity<Object> handlerActivationTokenAlreadyUsed(
+            ActivationTokenAlreadyUsedException e) {
+        return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(ExpiredActivationTokenException.class)
+    public ResponseEntity<Object> handlerExpiredActivationToken(ExpiredActivationTokenException e) {
+        log.warn("Activation token expired: {}", e.getMessage());
+        return build(HttpStatus.GONE, e.getMessage());
     }
 
     @ExceptionHandler(AttributeErrorsException.class)

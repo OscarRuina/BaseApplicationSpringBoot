@@ -3,6 +3,8 @@ package com.organization.application.converters;
 import com.organization.application.dtos.response.LoginResponseDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
 import com.organization.application.models.entities.UserEntity;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +27,17 @@ public class UserConverter {
                         .map(roleConverter::roleToRoleResponseDTO)
                             .collect(Collectors.toSet()))
                 .active(userEntity.isActive())
+                .activatedAt(toInstant(userEntity.getActivatedAt()))
                 .build();
+    }
+
+    /**
+     * La entidad guarda un {@link java.sql.Timestamp} porque es el tipo que mapea el driver.
+     * Convertir en el borde evita filtrar un tipo de JDBC al contrato JSON, donde Jackson lo
+     * serializaría como epoch en lugar de una fecha legible.
+     */
+    private Instant toInstant(Timestamp activatedAt) {
+        return activatedAt == null ? null : activatedAt.toInstant();
     }
 
     public LoginResponseDTO userToLoginResponseDTO(UserEntity userEntity, String token){

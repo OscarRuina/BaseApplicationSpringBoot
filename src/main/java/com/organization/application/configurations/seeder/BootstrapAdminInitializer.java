@@ -7,6 +7,7 @@ import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.sql.Timestamp;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -104,6 +105,7 @@ public class BootstrapAdminInitializer implements CommandLineRunner {
                 .email(email)
                 .password(rawPassword)
                 .active(true)
+                .activatedAt(new Timestamp(System.currentTimeMillis()))
                 .roleEntities(Set.of(adminRole))
                 .build();
 

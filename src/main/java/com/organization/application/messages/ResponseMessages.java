@@ -16,6 +16,8 @@ public final class ResponseMessages {
 
     public static final String REGISTER_SUCCESSFUL = "Register Successful";
 
+    public static final String ACTIVATE_SUCCESSFUL = "Activate Successful";
+
     public static final String DELETE_USER_SUCCESSFUL = "Delete User Successful";
 
     public static final String UPDATE_STATUS_SUCCESSFUL = "Update Status Successful";

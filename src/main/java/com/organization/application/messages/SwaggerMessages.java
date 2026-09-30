@@ -30,6 +30,8 @@ public final class SwaggerMessages {
 
     public static final String ERROR_RESPONSE_409 = "Conflict";
 
+    public static final String ERROR_RESPONSE_410 = "Gone";
+
     public static final String ERROR_RESPONSE_429 = "Too many requests";
 
     public static final String ERROR_RESPONSE_500 = "Internal server error";
@@ -53,9 +55,14 @@ public final class SwaggerMessages {
 
     public static final String USER_ALL_RESPONSE_200 = "Users returns successfully";
 
-    public static final String USER_REGISTER_OPERATION = "Return the user created";
+    public static final String USER_REGISTER_OPERATION = "Register a new account and send the activation link";
 
-    public static final String USER_REGISTER_RESPONSE_201 = "User created successfully";
+    public static final String USER_REGISTER_RESPONSE_201 = "Registration started successfully, check the inbox";
+
+    public static final String USER_ACTIVATE_OPERATION = "Activate an account by exchanging the emailed token "
+            + "for a password";
+
+    public static final String USER_ACTIVATE_RESPONSE_200 = "Account activated successfully";
 
     public static final String USER_ALL_ACTIVE_OPERATION = "Return all the active users";
 

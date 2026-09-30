@@ -39,8 +39,17 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 | Mail inside the transaction | `register` and reactivation send email before the commit; a send failure rolls back the whole operation. Don't move the send out casually |
 | `spring.jpa.open-in-view` | OSIV is enabled; don't 'fix' it without re-testing lazy paths |
 | `findAllByRoleForUpdate` | Relies on a count invariant (one `ADMIN` role max per user), so it has no `distinct` |
-| `register` role | Accepts only `USER` (`InvalidRoleException` otherwise) |
+| `register` role | Gone: the endpoint is public and takes no role. It hardcodes `USER` and takes no password either — a field an endpoint honours is a field a caller controls |
 | Login throttling | In-memory per instance; behind a reverse proxy `getRemoteAddr()` sees the proxy, not the client (see `LoginThrottle` javadoc) |
+| Pending vs suspended | `active_user` is the only login gate; `UserEntity.isPendingActivation()` (`activated_at_user IS NULL`) is the *only* place that distinguishes an unconfirmed registration from a suspended account. Every site that creates a user must set `activatedAt` — `UserService.register`, `UsersSeeder`, `BootstrapAdminInitializer`, the test seeder — or the API reports it as pending. `register` is now the public flow, and it is the one site that deliberately leaves it null; its fixtures in `UserControllerContractTests` do the same |
+| Activation token | `V3` stores a SHA-256 hex of the emailed token, never the token itself; `UNIQUE` makes the lookup single-row. `ddl-auto=validate` forces the entity and the migration to ship together — Flyway runs before JPA validation in the same boot. The hash stays after a successful activation so the service can return `409` (already used) instead of conflating it with `400` (unknown); the single-use guarantee is `activatedAt == null` (`isPendingActivation()`), not the nulling of the token |
+| `updateStatus` is not a password reset | It flips `active_user` and mails a plain notification; it never rotates the password. A suspended user logs back in with the password they chose, so the only way back in is an admin reactivating them |
+| Pending accounts reject `updateStatus` | `PendingActivationException` → `409`, in both directions, and the guard sits **before** the no-op check: a pending account is already inactive, so "suspend it" would otherwise return a `200` that changes nothing. Any test fixture without `activatedAt` is a *pending* user, not a suspended one — `AbstractSecuredIntegrationTest.persist`, `ReactivateMailRollbackTests.saveInactiveUser` and the `UserServiceTests.user(...)` helper all set it |
+| Activation redemption order | `used → expired → valid`. Reversed, a burned token past its window answers `410 "venció, esperate"` for a link that will never work; the caller waits forever for a mail that is not coming. `ActivationTokenAlreadyUsedException` is therefore reachable with an *already active* user, not a suspicious one |
+| SHA-256 is not reversible | A test cannot take the stored hash and derive the token. `UserControllerContractTests` fixes a known token per fixture (`TOKEN_PREFIX + email`, hashed on persist) and derives it from the email, never from the hash — the earlier `plainTokenFor(hash)` was a fake inverse that made every activation test hit the `400` unknown-token branch while reading as green |
+| Reissue needs a dead token | `register` re-mails only when the pending row's token has expired. Re-mailing a live token turns a convenience endpoint into an unauthenticated mail cannon at one inbox, so that case is `409` |
+| Register sends before commit | A mail failure rolls the row back, but the throttle counter is in-memory and does *not* roll back: a broken SMTP both leaves no user and burns the client's hourly budget. `RegisterMailRollbackTests` asserts the 21st attempt gets `429` even though all 20 rolled back — that is the intended interaction, not a bug |
+| Public endpoints stay out of the auth matrix | `UserControllerAuthorizationTests.allEndpoints()` lists only token-guarded routes. `publicEndpoints()` carries `/users/register` and `/users/activate`: with a token they must still reach the service, so listing them as guarded makes the filter's real behaviour (permit) look like a security failure |
 | Error envelope | `ApplicationResponse` uses `@JsonInclude(NON_NULL)`: errors are `{"message": ...}` with no `data` field |
 | Schema authority | Flyway owns the schema, `ddl-auto=validate` only verifies it. Add a new `V<n>__*.sql` in `src/main/resources/db/migration`; never edit one that has been applied |
 | Migrations vs suite | The suite runs H2 with `spring.flyway.enabled=false`, so a migration that breaks MySQL stays green. Verify against real MySQL 8.0 before merging |
@@ -56,10 +65,11 @@ Context path `/api`; every route except `POST /auth/login` requires a JWT.
 |------|--------|------|
 | Auth | `POST /auth/login` | public (throttled) |
 | Profile | `GET/PUT /users/me`, `PUT /users` | `ADMIN`, `USER` |
-| Admin | `GET /users` (+ `/active`, `/{id}`), `POST /register`, `PUT /status/{id}`, `PUT /roles/{id}`, `DELETE /{id}` | `ADMIN` |
+| Admin | `GET /users` (+ `/active`, `/{id}`), `PUT /status/{id}`, `PUT /roles/{id}`, `DELETE /{id}` | `ADMIN` |
+| Public | `POST /users/register`, `POST /users/activate` | none |
 
 Full endpoint table, response contract and parameter details: [`README.md`](README.md).
 
 ## Backlog
 
-- Forgot/reset password flow (mail temporary credentials) — not implemented; pattern is the register/reactivation email flow.
+- Forgot/reset password flow (mail temporary credentials) — not implemented; now the *only* missing piece, because reactivation deliberately stopped rotating passwords. Pattern to follow: the register/reactivation email flow.

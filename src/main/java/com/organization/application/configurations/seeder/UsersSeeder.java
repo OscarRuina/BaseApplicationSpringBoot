@@ -5,6 +5,7 @@ import com.organization.application.models.entities.UserEntity;
 import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IRoleRepository;
 import com.organization.application.repositories.IUserRepository;
+import java.sql.Timestamp;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -53,32 +54,27 @@ public class UsersSeeder implements CommandLineRunner {
     }
 
     private void loadUser() {
-        userRepository.save(buildUserUser("user","user","user@hotmail.com",seedPassword));
-    }
-
-    private UserEntity buildUserUser(String firstName, String lastName, String email, String password) {
-        return UserEntity.builder()
-                .firstname(firstName)
-                .lastname(lastName)
-                .email(email)
-                .active(true)
-                .password(passwordEncoder.encode(password))
-                .roleEntities(Set.of(roleRepository.findByType(RoleType.USER).orElseThrow()))
-                .build();
+        userRepository.save(buildUser("user","user","user@hotmail.com",RoleType.USER));
     }
 
     private void loadUserAdmin() {
-        userRepository.save(buildUserAdmin("admin","admin","admin@gmail.com",seedPassword));
+        userRepository.save(buildUser("admin","admin","admin@gmail.com",RoleType.ADMIN));
     }
 
-    private UserEntity buildUserAdmin(String firstName, String lastName, String email, String password) {
+    /**
+     * Las cuentas del seeder nacen activas y con el mail irrelevante: son usuarios de desarrollo
+     * confirmados de antemano, así que activatedAt va puesto. Si quedara en null, una llamada a
+     * isPendingActivation() las reportaría como registros públicos sin confirmar.
+     */
+    private UserEntity buildUser(String firstName, String lastName, String email, RoleType roleType) {
         return UserEntity.builder()
                 .firstname(firstName)
                 .lastname(lastName)
                 .email(email)
                 .active(true)
-                .password(passwordEncoder.encode(password))
-                .roleEntities(Set.of(roleRepository.findByType(RoleType.ADMIN).orElseThrow()))
+                .activatedAt(new Timestamp(System.currentTimeMillis()))
+                .password(passwordEncoder.encode(seedPassword))
+                .roleEntities(Set.of(roleRepository.findByType(roleType).orElseThrow()))
                 .build();
     }
 

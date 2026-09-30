@@ -1,16 +1,22 @@
 package com.organization.application.services.implementations;
 
 import com.organization.application.configurations.email.service.IEmailService;
+import com.organization.application.configurations.exceptions.ActivationTokenAlreadyUsedException;
 import com.organization.application.configurations.exceptions.CurrentPasswordInvalidException;
 import com.organization.application.configurations.exceptions.CurrentPasswordRequiredException;
+import com.organization.application.configurations.exceptions.ExpiredActivationTokenException;
 import com.organization.application.configurations.exceptions.ForbiddenException;
+import com.organization.application.configurations.exceptions.InvalidActivationTokenException;
 import com.organization.application.configurations.exceptions.InvalidRoleException;
+import com.organization.application.configurations.exceptions.PendingActivationException;
 import com.organization.application.configurations.exceptions.TooManyAttemptsException;
 import com.organization.application.configurations.exceptions.UserAlreadyExistException;
 import com.organization.application.configurations.exceptions.UserInactiveException;
 import com.organization.application.configurations.exceptions.UserNotExistException;
 import com.organization.application.configurations.security.throttle.LoginThrottle;
+import com.organization.application.configurations.security.throttle.RegistrationThrottle;
 import com.organization.application.converters.UserConverter;
+import com.organization.application.dtos.request.ActivateAccountRequestDTO;
 import com.organization.application.dtos.request.RegisterUserRequestDTO;
 import com.organization.application.dtos.request.UpdateUserRequestDTO;
 import com.organization.application.dtos.response.UserResponseDTO;
@@ -21,12 +27,21 @@ import com.organization.application.models.enums.RoleType;
 import com.organization.application.repositories.IUserRepository;
 import com.organization.application.services.interfaces.IRoleService;
 import com.organization.application.services.interfaces.IUserService;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,31 +63,42 @@ public class UserService implements IUserService {
 
     private final LoginThrottle loginThrottle;
 
-    private static final String EMAIL_SUBJECT = "Registro de Usuario";
+    private final RegistrationThrottle registrationThrottle;
 
-    private static final String EMAIL_SUBJECT_REACTIVATED = "Credenciales restablecidas";
+    private final String frontendBaseUrl;
 
-    private static final String TEMPLATE_NEW_USER = "email_new_user";
+    private static final String EMAIL_SUBJECT_ACTIVATION = "Confirme su registro";
+
+    private static final String EMAIL_SUBJECT_REACTIVATED = "Cuenta reactivada";
+
+    private static final String TEMPLATE_ACTIVATE_ACCOUNT = "email_activate_account";
 
     private static final String TEMPLATE_REACTIVATED_USER = "email_reactivated_user";
 
     private static final char[] PASSWORD_ALPHABET =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".toCharArray();
 
-    private static final int TEMPORARY_PASSWORD_LENGTH = 16;
+    private static final int RANDOM_PASSWORD_LENGTH = 16;
+
+    private static final int ACTIVATION_TOKEN_BYTES = 32;
+
+    private static final Duration ACTIVATION_TTL = Duration.ofDays(7);
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public UserService(IUserRepository userRepository, UserConverter userConverter,
             IRoleService roleService,
             IEmailService emailService, PasswordEncoder passwordEncoder,
-            LoginThrottle loginThrottle) {
+            LoginThrottle loginThrottle, RegistrationThrottle registrationThrottle,
+            @Value("${app.frontend-base-url}") String frontendBaseUrl) {
         this.userRepository = userRepository;
         this.userConverter = userConverter;
         this.roleService = roleService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.loginThrottle = loginThrottle;
+        this.registrationThrottle = registrationThrottle;
+        this.frontendBaseUrl = frontendBaseUrl;
     }
 
     /**
@@ -92,65 +118,208 @@ public class UserService implements IUserService {
 
     /**
      * Método encargado de crear un nuevo usuario en la aplicación
-     * La creación del usuario y el envío del mail ocurren dentro de la misma transacción,
+     *
+     * <p>El registro es público y no lleva contraseña: la cuenta nace inactiva y pendiente de
+     * confirmación, con un token de un solo uso que viaja por mail. El rol se fija en USER acá
+     * y no en el request porque aceptarlo abriría la auto-asignación de ADMIN.
+     *
+     * <p>La creación del usuario y el envío del mail ocurren dentro de la misma transacción,
      * por lo que un fallo en el envío revierte el alta y no queda ningún usuario persistido
+     *
      * @param registerUserRequestDTO
+     * @param clientIp
      * @return UserResponseDTO
      */
     @Override
     @Transactional
-    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO) {
+    public UserResponseDTO register(RegisterUserRequestDTO registerUserRequestDTO, String clientIp) {
         log.info("Inside user service method register");
-        if (userRepository.existsByEmail(registerUserRequestDTO.getEmail())){
+
+        long retryAfter = registrationThrottle.retryAfterSeconds(clientIp);
+        if (retryAfter > 0) {
+            throw new TooManyAttemptsException(ExceptionMessages.TOO_MANY_ATTEMPTS, retryAfter);
+        }
+
+        Optional<UserEntity> existing = userRepository.findByEmail(registerUserRequestDTO.getEmail());
+
+        if (existing.isEmpty()) {
+            return createPendingUser(registerUserRequestDTO, clientIp);
+        }
+
+        // Un token vencido sobre un registro sin confirmar es un callejón sin salida: el correo
+        // ya está tomado y la cuenta no tiene forma de activarse. Se rota el token y se vuelve a
+        // enviar en lugar de devolver un 409 que no le deja hacer nada al usuario.
+        UserEntity pending = existing.get();
+        if (pending.isPendingActivation() && isExpired(pending)) {
+            log.info("Reissuing an expired activation token");
+            return reissueActivationToken(pending, clientIp);
+        }
+
+        throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
+    }
+
+    private UserResponseDTO createPendingUser(RegisterUserRequestDTO request, String clientIp) {
+        RoleEntity role = roleService.findRoleByType(RoleType.USER);
+        String token = newActivationToken();
+
+        UserEntity user = UserEntity.builder()
+                .firstname(request.getFirstname())
+                .lastname(request.getLastname())
+                .email(request.getEmail())
+                .password(placeholderPassword())
+                .active(false)
+                // activatedAt queda null a propósito: es lo que marca la cuenta como pendiente.
+                .activatedAt(null)
+                .activationToken(hash(token))
+                .activationExpiresAt(expirationFromNow())
+                .roleEntities(Set.of(role))
+                .build();
+
+        user = saveOrTranslateConflict(user);
+        recordRegistrationAttempt(clientIp);
+        sendActivationMail(user, token);
+        return userConverter.userToUserResponseDTO(user);
+    }
+
+    private UserResponseDTO reissueActivationToken(UserEntity user, String clientIp) {
+        String token = newActivationToken();
+        user.setActivationToken(hash(token));
+        user.setActivationExpiresAt(expirationFromNow());
+        user = saveOrTranslateConflict(user);
+        recordRegistrationAttempt(clientIp);
+        sendActivationMail(user, token);
+        return userConverter.userToUserResponseDTO(user);
+    }
+
+    /**
+     * Cuenta el intento recién cuando la llamada llegó al envío del mail. Los 409 por correo
+     * duplicado no cuentan: si contaran, el endpoint serviría para agotarle el presupuesto de
+     * correo a un tercero sin necesidad, mandando correos que ya existen.
+     */
+    private void recordRegistrationAttempt(String clientIp) {
+        registrationThrottle.recordAttempt(clientIp);
+    }
+
+    private UserEntity saveOrTranslateConflict(UserEntity user) {
+        try {
+            return userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Concurrent registration detected for email {}", user.getEmail());
             throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
-        }else {
-            if (registerUserRequestDTO.getRole() != RoleType.USER){
-                throw new InvalidRoleException(ExceptionMessages.ROLE_NOT_VALID);
-            }
-            RoleEntity role = roleService.findRoleByType(registerUserRequestDTO.getRole());
-            log.info(role.getType().name());
-
-            String temporaryPassword = generateTemporaryPassword();
-            UserEntity user = UserEntity.builder()
-                    .firstname(registerUserRequestDTO.getFirstname())
-                    .lastname(registerUserRequestDTO.getLastname())
-                    .email(registerUserRequestDTO.getEmail())
-                    .password(passwordEncoder.encode(temporaryPassword))
-                    .active(true)
-                    .roleEntities(Set.of(role))
-                    .build();
-
-            try {
-                user = userRepository.saveAndFlush(user);
-            } catch (DataIntegrityViolationException e) {
-                log.warn("Concurrent registration detected for email {}",
-                        registerUserRequestDTO.getEmail());
-                throw new UserAlreadyExistException(ExceptionMessages.USER_ALREADY_EXIST);
-            }
-
-            String[] toUser = {registerUserRequestDTO.getEmail()};
-            Map<String, Object> message = new HashMap<>();
-            message.put("username", registerUserRequestDTO.getEmail());
-            message.put("password", temporaryPassword);
-            emailService.sendEmail(toUser, EMAIL_SUBJECT, TEMPLATE_NEW_USER, message);
-            return userConverter.userToUserResponseDTO(user);
         }
     }
 
-    private String generateTemporaryPassword() {
-        StringBuilder password = new StringBuilder(TEMPORARY_PASSWORD_LENGTH);
-        for (int i = 0; i < TEMPORARY_PASSWORD_LENGTH; i++) {
+    /**
+     * Método encargado de canjear el token de activación por la contraseña definitiva
+     *
+     * <p>El orden de las validaciones importa y no es arbitrario: primero se busca el token,
+     * después se descarta que ya se haya usado, y recién al final se mira la expiración. Al
+     * revés, un token vencido de una cuenta ya activada se reportaría como expirado cuando en
+     * realidad está quemado, y el usuario recibiría un mensaje que lo invite a esperar algo que
+     * no va a pasar.
+     *
+     * @param activateAccountRequestDTO
+     * @return UserResponseDTO
+     */
+    @Override
+    @Transactional
+    public UserResponseDTO activate(ActivateAccountRequestDTO activateAccountRequestDTO) {
+        log.info("Inside user service method activate");
+
+        UserEntity user = userRepository.findByActivationToken(
+                hash(activateAccountRequestDTO.getToken())).orElseThrow(
+                () -> new InvalidActivationTokenException(
+                        ExceptionMessages.INVALID_ACTIVATION_TOKEN));
+
+        if (!user.isPendingActivation()) {
+            throw new ActivationTokenAlreadyUsedException(
+                    ExceptionMessages.ACTIVATION_TOKEN_ALREADY_USED);
+        }
+
+        if (isExpired(user)) {
+            throw new ExpiredActivationTokenException(ExceptionMessages.ACTIVATION_TOKEN_EXPIRED);
+        }
+
+        user.setPassword(passwordEncoder.encode(activateAccountRequestDTO.getPassword()));
+        user.setActivatedAt(now());
+        user.setActive(true);
+
+        // El hash del token se conserva a propósito: es lo que permite distinguir "ya usado"
+        // (409) de "desconocido" (400). El uso único lo garantiza el guard de pendiente, no
+        // borrar la fila.
+        return userConverter.userToUserResponseDTO(userRepository.saveAndFlush(user));
+    }
+
+    private String generateRandomPassword() {
+        StringBuilder password = new StringBuilder(RANDOM_PASSWORD_LENGTH);
+        for (int i = 0; i < RANDOM_PASSWORD_LENGTH; i++) {
             password.append(PASSWORD_ALPHABET[SECURE_RANDOM.nextInt(PASSWORD_ALPHABET.length)]);
         }
         return password.toString();
     }
 
-    private void sendTemporaryCredentials(UserEntity user, String temporaryPassword) {
-        String[] toUser = {user.getEmail()};
+    /**
+     * La columna de contraseña es NOT NULL sin default, así que la cuenta pendiente necesita
+     * algo guardado. Es un valor aleatorio que el usuario nunca conoce y que se reemplaza en el
+     * momento de activarse: sirve para que una fila pendiente no sea activable por la vía
+     * rápida del login, no para ser una credencial.
+     */
+    private String placeholderPassword() {
+        return passwordEncoder.encode(generateRandomPassword());
+    }
+
+    private String newActivationToken() {
+        byte[] bytes = new byte[ACTIVATION_TOKEN_BYTES];
+        SECURE_RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
+    }
+
+    /**
+     * Lo que se persiste es el hash. Un dump de la tabla no sirve para activar cuentas, que es
+     * justamente el motivo de no guardar el token en claro.
+     */
+    private String hash(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is required by every JRE", e);
+        }
+    }
+
+    private Timestamp expirationFromNow() {
+        return Timestamp.from(Instant.now().plus(ACTIVATION_TTL));
+    }
+
+    private boolean isExpired(UserEntity user) {
+        return user.getActivationExpiresAt() == null
+                || user.getActivationExpiresAt().before(Timestamp.from(Instant.now()));
+    }
+
+    private void sendActivationMail(UserEntity user, String token) {
         Map<String, Object> message = new HashMap<>();
-        message.put("username", user.getEmail());
-        message.put("password", temporaryPassword);
-        emailService.sendEmail(toUser, EMAIL_SUBJECT_REACTIVATED, TEMPLATE_REACTIVATED_USER, message);
+        // Único momento en que el token en claro existe fuera del buzón del usuario.
+        message.put("activationLink", activationLink(token));
+        message.put("expiryDays", ACTIVATION_TTL.toDays());
+        emailService.sendEmail(new String[]{user.getEmail()}, EMAIL_SUBJECT_ACTIVATION,
+                TEMPLATE_ACTIVATE_ACCOUNT, message);
+    }
+
+    private String activationLink(String token) {
+        return "%s/activate?token=%s".formatted(frontendBaseUrl, token);
+    }
+
+    private Timestamp now() {
+        return Timestamp.from(Instant.now());
+    }
+
+    /**
+     * Aviso de que la cuenta volvió a estar activa. No lleva credenciales porque la contraseña
+     * no se tocan: sigue siendo la que el usuario eligió al registrarse o al activarse.
+     */
+    private void sendReactivationNotification(UserEntity user) {
+        emailService.sendEmail(new String[]{user.getEmail()}, EMAIL_SUBJECT_REACTIVATED,
+                TEMPLATE_REACTIVATED_USER, Map.of());
     }
 
     /**
@@ -233,6 +402,11 @@ public class UserService implements IUserService {
 
     /**
      * Método encargado de actualizar el estado de un usuario en la aplicación
+     *
+     * <p>Reactivar no rota la contraseña ni manda credenciales: el usuario recupera el acceso
+     * con la que él mismo eligió. Si se olvidó, el forgot/reset documentado en el backlog es el
+     * camino, no este endpoint.
+     *
      * @param id
      * @param active
      * @param callerEmail
@@ -250,6 +424,13 @@ public class UserService implements IUserService {
             throw new ForbiddenException(ExceptionMessages.CANT_UPDATE_STATUS);
         }
 
+        // Una cuenta pendiente no está suspendida: está esperando el mail de activación. El
+        // guard va antes del no-op a propósito, porque "suspender" una cuenta ya inactiva
+        // devolvería un 200 silencioso y el admin creería que la suspendió.
+        if (user.isPendingActivation()){
+            throw new PendingActivationException(ExceptionMessages.USER_PENDING_ACTIVATION);
+        }
+
         if (user.isActive() == active){
             return userConverter.userToUserResponseDTO(user);
         }
@@ -258,17 +439,11 @@ public class UserService implements IUserService {
             throw new ForbiddenException(ExceptionMessages.LAST_ADMIN_PROTECTED);
         }
 
-        String temporaryPassword = null;
-        if (active) {
-            temporaryPassword = generateTemporaryPassword();
-            user.setPassword(passwordEncoder.encode(temporaryPassword));
-        }
-
         user.setActive(active);
         userRepository.saveAndFlush(user);
 
         if (active) {
-            sendTemporaryCredentials(user, temporaryPassword);
+            sendReactivationNotification(user);
         }
         return userConverter.userToUserResponseDTO(user);
     }
