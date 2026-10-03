@@ -8,7 +8,7 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 |------|---------|
 | Full suite (Docker) | `docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app -u $(id -u):$(id -g) maven:3.9-eclipse-temurin-17 mvn -Duser.home=/tmp -B test` |
 | Full suite (local) | `./mvnw test` |
-| Run locally | `./mvnw spring-boot:run` (env vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `TOKEN_SECRET_KEY`, `EMAIL`, `EMAIL_PASSWORD`; optional `MAIL_*`, `APP_SEED_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, `BOOTSTRAP_ADMIN_*`) |
+| Run locally | `./mvnw spring-boot:run` — the `dev` profile reads `.env` (copy `.env.example` and fill the blanks). Without `dev`, export the vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `TOKEN_SECRET_KEY`, `EMAIL`, `EMAIL_PASSWORD`; optional `MAIL_*`, `APP_SEED_PASSWORD`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, `BOOTSTRAP_ADMIN_*` |
 | Dev seeding | `@Profile("dev")` seeder: seeds `admin@gmail.com` (`ADMIN`) and `user@hotmail.com` (`USER`) with `APP_SEED_PASSWORD` when the DB is empty |
 
 ## Where things live
@@ -58,6 +58,8 @@ Spring Boot 3 REST API (Java 17, Maven, Lombok) for user administration: JWT aut
 | Roles come from `V2` | `RoleService.findRoleByType` throws when the row is missing, so an empty `roles` table breaks registration. The `dev` seeder's `loadRoles()` is only a test-suite safety net |
 | First admin in production | `BootstrapAdminInitializer` is the only supported way to create an admin outside `dev`. Opt-in via `BOOTSTRAP_ADMIN_*`, runs last (seeder is `@Order(0)`), never promotes an existing account, and fails the boot on a weak password. The password policy is duplicated from `UpdateUserRequestDTO` on purpose — `save()` runs no bean validation — so change both together |
 | Bootstrap vs H2 suite | Its repository queries and insert only run against MySQL in production; `ApplicationContextRunner` covers the condition and ordering, not the SQL. `/tmp/opencode/verify-bootstrap.sh` checks the four real-MySQL scenarios |
+| `.env` is read as a properties file | `spring.config.import=optional:file:.env[.properties]` lives in `application-dev.properties`, so it applies to the `dev` profile only — every test runs under `test` and never sees it. Spring Boot 3.1.5 has no dotenv support; this import is the whole mechanism. Parsed by the properties loader, not a real dotenv: `#` opens a comment and `\` escapes, so a `#` inside a password truncates it and only fails later, at connection time. No `$VAR` expansion, and it cannot set `SPRING_PROFILES_ACTIVE` — the profile decides whether the file is read |
+| Imports lose to real env vars | Config imports are registered with `propertySources.addLast`, i.e. the lowest precedence, so an exported `DB_URL` overrides `.env`. Keep it that way: it is what lets Docker and CI inject variables and stay unaffected. |
 
 ## Endpoints (overview)
 

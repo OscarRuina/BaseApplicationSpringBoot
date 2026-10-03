@@ -8,16 +8,12 @@ A Spring Boot base template for a JSON API with users and roles, JWT authenticat
 # 1. Create an empty MySQL database (the tables come from the Flyway migrations)
 mysql -e "create database base_app;"
 
-# 2. Export the required environment variables (see Configuration)
-export DB_URL="jdbc:mysql://localhost:3306/base_app"
-export DB_USERNAME="root"
-export DB_PASSWORD="your-db-password"
-export TOKEN_SECRET_KEY="$(openssl rand -base64 32)"
-export EMAIL="your-bot@example.com"
-export EMAIL_PASSWORD="your-app-password"
+# 2. Create .env from the template and fill in every blank (see Configuration)
+cp .env.example .env
+TOKEN_SECRET_KEY="$(openssl rand -base64 32)"   # paste this output into .env
 
-# 3. Run it
-SPRING_PROFILES_ACTIVE=dev APP_SEED_PASSWORD=your-dev-password mvn spring-boot:run
+# 3. Run it — the dev profile reads .env
+SPRING_PROFILES_ACTIVE=dev mvn spring-boot:run
 
 # 4. Log in and read your own profile
 curl -s http://localhost:8085/api/auth/login \
@@ -27,11 +23,23 @@ curl -s http://localhost:8085/api/users/me \
   -H "Authorization: Bearer <token>"
 ```
 
-Spring Boot does **not** read a `.env` file (no dotenv dependency). Export the variables into the actual environment, or set them in your IDE run configuration.
+The `dev` profile reads a `.env` file from the working directory — no dotenv dependency, just `spring.config.import`. Copy `.env.example`, fill in the blanks, and never commit the result. Outside `dev` the file is not read at all.
 
 ## Configuration
 
 Base URL: `http://localhost:8085/api` (port 8085, context path `/api`).
+
+### The `.env` file
+
+`.env` is a local convenience for the `dev` profile. It is read from the working directory, and nothing reads it anywhere else. The rules that bite:
+
+- **Only `dev`.** `spring.config.import` lives in `application-dev.properties`. Without that profile active, `.env` is ignored, so production and the test suite never see it.
+- **Real environment variables win.** Imports are registered at the lowest precedence, so an exported `DB_URL` overrides the one in `.env`. That keeps Docker and CI working off injected variables.
+- **A missing file is a no-op.** The `optional:` prefix means the app boots exactly as it did before if there is no `.env`.
+- **It is parsed as Java properties, not as a real dotenv.** `#` opens a comment and `\` escapes. A `#` inside a password truncates it silently and only fails later, at connection time. Do not quote values — quotes become part of the value.
+- **No `$VAR` expansion**, and `.env` cannot set `SPRING_PROFILES_ACTIVE` itself: the profile decides whether the file is read, so it has to come from the command line or your IDE run configuration.
+
+Values in `.env.example` are intentionally blank rather than illustrative. A placeholder secret becomes a real secret the moment it lands in the repository; an empty value is the one thing a secret scanner has nothing to match.
 
 ### Required (no default, the app fails to start without them)
 
@@ -85,10 +93,10 @@ Base URL: `http://localhost:8085/api` (port 8085, context path `/api`).
 Run with `dev` active to mirror local conventions:
 
 ```bash
-SPRING_PROFILES_ACTIVE=dev APP_SEED_PASSWORD=your-dev-password mvn spring-boot:run
+SPRING_PROFILES_ACTIVE=dev mvn spring-boot:run
 ```
 
-The `dev` profile enables SQL logging and Security debug logging, disables mail template caching, and runs the seeder. On startup the seeder — only when the users table is empty — creates two accounts, both with `APP_SEED_PASSWORD`:
+This is also the profile that picks up `.env`, so put `APP_SEED_PASSWORD` there instead of on the command line. The `dev` profile enables SQL logging and Security debug logging, disables mail template caching, and runs the seeder. On startup the seeder — only when the users table is empty — creates two accounts, both with `APP_SEED_PASSWORD`:
 
 | Email | Role |
 |-------|------|
