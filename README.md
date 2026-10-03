@@ -144,12 +144,12 @@ Migrations live in `src/main/resources/db/migration`, named `V<n>__<description>
 
 Two starting points, both handled by the same configuration:
 
-- **Empty database** → `V1` creates the tables, `V2` seeds the roles.
-- **Database that already exists** (created by an earlier `ddl-auto=update`) → `flyway.baseline-on-migrate` marks it as version 1, so `V1` is skipped and only `V2` runs.
+- **Empty database** → every migration runs, in order: `V1` creates the tables, `V2` seeds the roles, `V3` adds the activation columns.
+- **Database that already exists** (created by an earlier `ddl-auto=update`) → `flyway.baseline-on-migrate` marks it as version 1, so `V1` is skipped and every migration after it runs.
 
 That is exactly why `V1` exists: `baseline-on-migrate` only baselines a **non-empty** schema, so an empty one has no way to obtain the tables that `V2` inserts into.
 
-To change the schema, add a new `V3__...`, `V4__...` file. Never edit a migration that has already been applied anywhere — Flyway will not notice and two databases will silently diverge.
+To change the schema, add a new file with the next unused version number (`V<n+1>__...`) and add it to the table above. Never edit a migration that has already been applied anywhere — Flyway will not notice and two databases will silently diverge.
 
 ### Notes and caveats
 
